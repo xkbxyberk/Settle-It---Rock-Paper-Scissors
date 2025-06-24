@@ -1,9 +1,7 @@
-//___FILEHEADER___
-
 import SwiftUI
 
 @main
-struct ___PACKAGENAME:identifier___App: App {
+struct Settle_It____Rock_Paper_ScissorsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

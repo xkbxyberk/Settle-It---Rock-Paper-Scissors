@@ -216,13 +216,15 @@ struct GameOverView: View {
     private var actionButton: some View {
         VStack(spacing: 12) {
             Button(action: {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                impactFeedback.impactOccurred()
                 multipeerManager.resetGame()
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "arrow.counterclockwise.circle.fill")
                         .font(.title2)
                     
-                    Text("Ana Menüye Dön")
+                    Text("Yeni Turnuva")
                         .font(.headline)
                         .fontWeight(.semibold)
                 }

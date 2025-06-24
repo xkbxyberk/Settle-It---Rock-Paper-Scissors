@@ -6,8 +6,8 @@ struct GamePlayView: View {
     /// MultipeerManager'dan geçirilen environment object
     @EnvironmentObject var multipeerManager: MultipeerManager
     
-    /// Geri sayım sayacı
-    @State private var countdown = 5
+    /// Geri sayım sayacı - ayarlardan alınır
+    @State private var countdown = 3
     
     /// Timer referansı
     @State private var countdownTimer: Timer?
@@ -104,7 +104,7 @@ struct GamePlayView: View {
                     .frame(width: 150, height: 150)
                 
                 Circle()
-                    .trim(from: 0, to: CGFloat(countdown) / 5.0)
+                    .trim(from: 0, to: CGFloat(countdown) / CGFloat(multipeerManager.settings.countdownDuration))
                     .stroke(Color.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .frame(width: 150, height: 150)
                     .rotationEffect(.degrees(-90))
@@ -200,6 +200,8 @@ struct GamePlayView: View {
                     isSelected: hasUserMadeChoice && multipeerManager.gameState.choices[multipeerManager.getCurrentPlayerName()] == .tas,
                     isDisabled: hasUserMadeChoice
                 ) {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
                     multipeerManager.makeChoice(choice: .tas)
                 }
                 
@@ -210,6 +212,8 @@ struct GamePlayView: View {
                     isSelected: hasUserMadeChoice && multipeerManager.gameState.choices[multipeerManager.getCurrentPlayerName()] == .kagit,
                     isDisabled: hasUserMadeChoice
                 ) {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
                     multipeerManager.makeChoice(choice: .kagit)
                 }
                 
@@ -220,6 +224,8 @@ struct GamePlayView: View {
                     isSelected: hasUserMadeChoice && multipeerManager.gameState.choices[multipeerManager.getCurrentPlayerName()] == .makas,
                     isDisabled: hasUserMadeChoice
                 ) {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
                     multipeerManager.makeChoice(choice: .makas)
                 }
             }
@@ -331,10 +337,18 @@ struct GamePlayView: View {
     private func setupCountdownTimer() {
         guard multipeerManager.gameState.gamePhase == .geriSayim else { return }
         
-        countdown = 5
+        // Ayarlardan geri sayım süresini al
+        countdown = multipeerManager.settings.countdownDuration
+        
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if countdown > 0 {
                 countdown -= 1
+                
+                // Haptic feedback (son 3 saniyede)
+                if countdown <= 3 {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }
             } else {
                 stopCountdownTimer()
                 multipeerManager.startRound()

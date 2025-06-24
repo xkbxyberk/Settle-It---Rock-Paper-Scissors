@@ -23,6 +23,10 @@ struct LobbyView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
+        .onAppear {
+            // Lobi'ye geldiğimizde servisleri yeniden başlat
+            multipeerManager.restartServices()
+        }
     }
     
     // MARK: - Header Section
@@ -126,6 +130,8 @@ struct LobbyView: View {
             if multipeerManager.gameState.players.count >= 2 {
                 // Oyun başlatma butonu
                 Button(action: {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
                     multipeerManager.startGame()
                 }) {
                     HStack(spacing: 12) {

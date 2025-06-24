@@ -11,6 +11,18 @@ class MultipeerManager: NSObject, ObservableObject {
     /// Oyunun merkezi durumu - UI değişiklikleri için reaktif
     @Published var gameState = GameState()
     
+    /// Bağlantı kopması bildirimi için
+    @Published var connectionAlert: ConnectionAlert?
+    
+    /// Oyun ayarları
+    @Published var settings = GameSettings.load() {
+        didSet {
+            settings.save()
+            // applySettings() burada çağrılmayacak çünkü sonsuz döngüye sebep olur
+            print("⚙️ Ayarlar güncellendi")
+        }
+    }
+    
     // MARK: - MultipeerConnectivity Properties
     /// Bu cihazın benzersiz kimliği
     private let peerID: MCPeerID
@@ -52,14 +64,45 @@ class MultipeerManager: NSObject, ObservableObject {
         serviceAdvertiser.delegate = self
         serviceBrowser.delegate = self
         
-        // Servisleri başlat
-        startAdvertising()
-        startBrowsing()
+        // Ayarları uygula
+        applySettings()
         
-        // Kendi oyuncuyu gameState'e ekle
-        let currentPlayer = Player(displayName: peerID.displayName)
-        gameState.players.append(currentPlayer)
-        gameState.activePlayers.append(currentPlayer)
+        // Servisleri başlat (eğer ayarlarda autoConnect açıksa)
+        if settings.autoConnect {
+            startAdvertising()
+            startBrowsing()
+            
+            // Kendi oyuncuyu gameState'e ekle
+            let currentPlayer = Player(displayName: peerID.displayName)
+            gameState.players.append(currentPlayer)
+            gameState.activePlayers.append(currentPlayer)
+        }
+    }
+    
+    // MARK: - Settings Management
+    /// Ayarları uygular
+    private func applySettings() {
+        print("⚙️ Ayarlar uygulanıyor...")
+        
+        // Bağlantı ayarları henüz tam desteklenmiyor
+        // Gelecekte Wi-Fi only veya Bluetooth only modu eklenebilir
+        
+        print("✅ Ayarlar uygulandı")
+    }
+    
+    /// Ayarları varsayılana sıfırlar
+    func resetSettings() {
+        print("🔄 Ayarlar sıfırlanıyor...")
+        settings.reset()
+        settings = GameSettings.load()
+        print("✅ Ayarlar sıfırlandı")
+    }
+    
+    /// Haptic feedback çalar (ayarlarda açıksa)
+    func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+        guard settings.hapticFeedback else { return }
+        let impactFeedback = UIImpactFeedbackGenerator(style: style)
+        impactFeedback.impactOccurred()
     }
     
     // MARK: - Service Management
@@ -113,10 +156,17 @@ class MultipeerManager: NSObject, ObservableObject {
             return
         }
         
-        print("🎮 Oyun başlatılıyor - Oylama aşamasına geçiliyor")
+        print("🎮 Oyun başlatılıyor")
         
-        // Oyun aşamasını oylama olarak değiştir
-        gameState.gamePhase = .oylama
+        // Eğer tercih edilen mod varsa, doğrudan geri sayıma geç
+        if let preferredMode = settings.preferredGameMode {
+            print("🎯 Tercih edilen mod kullanılıyor: \(preferredMode.rawValue)")
+            gameState.gameMode = preferredMode
+            gameState.gamePhase = .geriSayim
+        } else {
+            print("🗳️ Oylama aşamasına geçiliyor")
+            gameState.gamePhase = .oylama
+        }
         
         // Active players listesini players listesi ile senkronize et
         gameState.activePlayers = gameState.players
@@ -181,11 +231,9 @@ class MultipeerManager: NSObject, ObservableObject {
         } else if sallamaVotes > dokunmaVotes {
             winningMode = .sallama
         } else {
-            // Beraberlik durumunda, teknik analizde belirtildiği gibi
-            // players dizisindeki ilk oyuncunun oyu geçerli
-            let firstPlayerName = gameState.players.first?.displayName ?? ""
-            winningMode = gameState.votes[firstPlayerName] ?? .dokunma
-            print("⚖️ Beraberlik! İlk oyuncunun (\(firstPlayerName)) oyu geçerli: \(winningMode.rawValue)")
+            // Beraberlik durumunda rastgele seçim
+            winningMode = [GameMode.dokunma, .sallama].randomElement()!
+            print("⚖️ Beraberlik! Rastgele seçilen mod: \(winningMode.rawValue)")
         }
         
         // Sonuçları uygula
@@ -328,18 +376,39 @@ class MultipeerManager: NSObject, ObservableObject {
     
     /// Oyunu sıfırlar ve ana menüye döner
     func resetGame() {
-        print("🔄 Oyun sıfırlanıyor...")
+        print("🔄 Oyun sıfırlanıyor ve ana menüye dönülüyor...")
         
         // Hareket algılamayı durdur
         stopMotionDetection()
         
-        // GameState'i sıfırla ama mevcut oyuncuları koru
-        let currentPlayers = gameState.players
-        gameState = GameState()
-        gameState.players = currentPlayers
-        gameState.activePlayers = currentPlayers
+        // Tüm servisleri durdur
+        serviceAdvertiser.stopAdvertisingPeer()
+        serviceBrowser.stopBrowsingForPeers()
+        session.disconnect()
         
-        print("✅ Oyun sıfırlandı - Lobi aşamasına dönüldü")
+        // GameState'i tamamen sıfırla
+        gameState = GameState()
+        
+        // Alert'i temizle
+        connectionAlert = nil
+        
+        print("✅ Oyun sıfırlandı - Ana menüye dönüldü")
+    }
+    
+    /// Oyunu yeniden başlatır (ana menüden geri gelirken)
+    func restartServices() {
+        print("🔄 Servisler yeniden başlatılıyor...")
+        
+        // Servisleri yeniden başlat
+        startAdvertising()
+        startBrowsing()
+        
+        // Kendi oyuncuyu gameState'e ekle
+        let currentPlayer = Player(displayName: peerID.displayName)
+        gameState.players.append(currentPlayer)
+        gameState.activePlayers.append(currentPlayer)
+        
+        print("✅ Servisler aktif, lobi hazır")
     }
     
     /// Teknik analizde belirtilen eleme algoritması
@@ -685,4 +754,12 @@ extension MultipeerManager: MCNearbyServiceBrowserDelegate {
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         print("👻 Peer kaybedildi: \(peerID.displayName)")
     }
+}
+
+// MARK: - Connection Alert
+/// Bağlantı uyarı mesajı
+struct ConnectionAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
 }

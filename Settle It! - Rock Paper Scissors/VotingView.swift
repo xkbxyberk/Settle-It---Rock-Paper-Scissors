@@ -92,6 +92,9 @@ struct VotingView: View {
                 isSelected: hasUserVoted && multipeerManager.gameState.votes[multipeerManager.getCurrentPlayerName()] == .dokunma,
                 isDisabled: hasUserVoted
             ) {
+                // Haptic feedback
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
                 multipeerManager.castVote(mode: .dokunma)
             }
             
@@ -103,6 +106,9 @@ struct VotingView: View {
                 isSelected: hasUserVoted && multipeerManager.gameState.votes[multipeerManager.getCurrentPlayerName()] == .sallama,
                 isDisabled: hasUserVoted
             ) {
+                // Haptic feedback
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
                 multipeerManager.castVote(mode: .sallama)
             }
         }

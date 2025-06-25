@@ -319,15 +319,24 @@ struct GamePlayView: View {
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 
-                // Hassasiyet göstergesi
-                HStack(spacing: 8) {
-                    Image(systemName: "gauge")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.6))
+                // Hassasiyet ve açıklama
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gauge")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.6))
+                        
+                        Text("Hassasiyet: \(shakeSensitivityText)")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                     
-                    Text("Hassasiyet: \(shakeSensitivityText)")
-                        .font(.caption)
+                    Text(shakeSensitivityDescription)
+                        .font(.caption2)
                         .foregroundColor(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .italic()
                 }
                 .padding(.top, 8)
             }
@@ -448,12 +457,31 @@ struct GamePlayView: View {
         }
     }
     
+    // MARK: - Shake Sensitivity Helper - Düzeltilmiş Kademelendirme
     private var shakeSensitivityText: String {
-        switch multipeerManager.settings.shakeSensitivity {
-        case 1.0...1.5: return "Düşük"
-        case 1.5...2.0: return "Normal"
-        case 2.0...2.5: return "Yüksek"
-        default: return "Çok Yüksek"
+        let sensitivity = multipeerManager.settings.shakeSensitivity
+        
+        // Tam değer eşleştirmesi kullanarak çakışmayı önlüyoruz
+        switch sensitivity {
+        case 1.0: return "Çok Düşük"
+        case 1.5: return "Düşük"
+        case 2.0: return "Normal"
+        case 2.5: return "Yüksek"
+        case 3.0: return "Çok Yüksek"
+        default: return "Normal"
+        }
+    }
+    
+    private var shakeSensitivityDescription: String {
+        let sensitivity = multipeerManager.settings.shakeSensitivity
+        
+        switch sensitivity {
+        case 1.0: return "Cihazı hafifçe eğmeniz bile yeterli"
+        case 1.5: return "Hafif bir hareket yeterli"
+        case 2.0: return "Orta seviye sallama gerekli"
+        case 2.5: return "Güçlü sallama yapmanız gerekli"
+        case 3.0: return "Çok güçlü sallama yapmanız gerekli"
+        default: return "Orta seviye sallama gerekli"
         }
     }
 }

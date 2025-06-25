@@ -227,9 +227,53 @@ struct SettingsView: View {
                 
                 InfoRow(
                     icon: "info.circle",
-                    title: "Sallama hassasiyeti",
-                    subtitle: "Bu ayar sadece senin cihazın için geçerli",
+                    title: "Sallama hassasiyeti açıklaması",
+                    subtitle: "Cihazınızı ne kadar güçlü sallamanız gerektiğini belirler. Bu ayar sadece sizin cihazınız için geçerlidir.",
                     color: .blue
+                )
+                
+                // Sallama modu açıklaması
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("📱 Sallama Modu Nasıl Çalışır?")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.7))
+                            Text("Cihazınızı herhangi bir yöne sallayın")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.7))
+                            Text("Hareket algılandığında rastgele seçim yapılır")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.7))
+                            Text("Hassasiyet arttıkça daha güçlü sallama gerekir")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.purple.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+                        )
                 )
             }
         }
@@ -320,13 +364,18 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Helper Properties
+    // MARK: - Helper Properties - Düzeltilmiş Kademelendirme
     private var shakeSensitivityText: String {
-        switch multipeerManager.settings.shakeSensitivity {
-        case 1.0...1.5: return "Düşük"
-        case 1.5...2.0: return "Normal"
-        case 2.0...2.5: return "Yüksek"
-        default: return "Çok Yüksek"
+        let sensitivity = multipeerManager.settings.shakeSensitivity
+        
+        // Tam değer eşleştirmesi kullanarak çakışmayı önlüyoruz
+        switch sensitivity {
+        case 1.0: return "Çok Düşük" // En hassas - çok hafif hareket yeterli
+        case 1.5: return "Düşük"     // Hafif hareket yeterli
+        case 2.0: return "Normal"    // Orta seviye hareket
+        case 2.5: return "Yüksek"    // Güçlü hareket gerekli
+        case 3.0: return "Çok Yüksek" // En az hassas - çok güçlü sallama
+        default: return "Normal"     // Beklenmeyen değer için fallback
         }
     }
 }

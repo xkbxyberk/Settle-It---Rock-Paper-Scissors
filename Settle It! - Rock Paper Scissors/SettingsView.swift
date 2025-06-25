@@ -68,6 +68,23 @@ struct SettingsView: View {
             }
         }
         .onAppear {
+            // Navigation bar için hafif şeffaf gradient-uyumlu background ayarla
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithTransparentBackground()
+            
+            // Gradient'e uyumlu hafif şeffaf renk (mor-mavi karışımı)
+            let gradientColor = UIColor(red: 0.4, green: 0.5, blue: 0.8, alpha: 0.15)
+            appearance.backgroundColor = gradientColor
+            
+            // Scroll edildiğinde de aynı hafif şeffaf background
+            let scrollAppearance = UINavigationBarAppearance()
+            scrollAppearance.configureWithOpaqueBackground()
+            scrollAppearance.backgroundColor = gradientColor
+            
+            UINavigationBar.appearance().standardAppearance = appearance
+            UINavigationBar.appearance().scrollEdgeAppearance = scrollAppearance
+            UINavigationBar.appearance().compactAppearance = scrollAppearance
+            
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
                 animateContent = true
             }
@@ -119,7 +136,8 @@ struct SettingsView: View {
                         ForEach(ConnectionType.allCases, id: \.self) { type in
                             ConnectionTypeButton(
                                 type: type,
-                                isSelected: multipeerManager.settings.connectionType == type
+                                isSelected: multipeerManager.settings.connectionType == type,
+                                multipeerManager: multipeerManager
                             ) {
                                 multipeerManager.settings.connectionType = type
                                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)

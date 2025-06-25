@@ -60,27 +60,11 @@ struct MenuView: View {
     // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 20) {
-            // App Icon
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [.white.opacity(0.3), .white.opacity(0.1)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.4), lineWidth: 2)
-                    )
-                
-                Text("🎯")
-                    .font(.system(size: 60))
-                    .scaleEffect(animateButtons ? 1.0 : 0.5)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: animateButtons)
-            }
+            // App Icon - Sadece Dart emojisi, çember yok
+            Text("🎯")
+                .font(.system(size: 80))
+                .scaleEffect(animateButtons ? 1.0 : 0.5)
+                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: animateButtons)
             
             VStack(spacing: 12) {
                 Text("Taş Kağıt Makas")
@@ -213,7 +197,7 @@ struct MenuView: View {
                 multipeerManager: multipeerManager
             ) {
                 multipeerManager.playHaptic(style: .heavy)
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showMenu = false
                 }
             }

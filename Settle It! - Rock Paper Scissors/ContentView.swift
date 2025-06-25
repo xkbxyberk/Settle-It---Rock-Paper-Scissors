@@ -18,6 +18,14 @@ struct ContentView: View {
     // MARK: - Body
     var body: some View {
         ZStack {
+            // Ana gradient background - her zaman görünür
+            LinearGradient(
+                gradient: Gradient(colors: [.blue.opacity(0.6), .purple.opacity(0.8)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
             if showMenu {
                 // Ana menü
                 MenuView(
@@ -26,12 +34,12 @@ struct ContentView: View {
                     userProfile: $userProfile
                 )
                 .environmentObject(multipeerManager)
-                .transition(multipeerManager.settings.animations ?
-                    .asymmetric(
-                        insertion: .scale.combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ) : .identity
+                .transition(
+                    multipeerManager.settings.animations ?
+                        .opacity.combined(with: .scale(scale: 0.95)) :
+                        .identity
                 )
+                
             } else {
                 // Oyun ekranları
                 NavigationView {
@@ -50,8 +58,8 @@ struct ContentView: View {
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
                             Button("Ana Menü") {
-                                let animationDuration = multipeerManager.settings.animations ? 0.5 : 0.1
-                                withAnimation(.spring(response: animationDuration, dampingFraction: 0.8)) {
+                                let animationDuration = multipeerManager.settings.animations ? 0.3 : 0.1
+                                withAnimation(.easeInOut(duration: animationDuration)) {
                                     // Oyunu sıfırla ve ana menüye dön
                                     multipeerManager.resetGame()
                                     showMenu = true
@@ -68,11 +76,10 @@ struct ContentView: View {
                     }
                 }
                 .environmentObject(multipeerManager)
-                .transition(multipeerManager.settings.animations ?
-                    .asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .scale.combined(with: .opacity)
-                    ) : .identity
+                .transition(
+                    multipeerManager.settings.animations ?
+                        .opacity.combined(with: .scale(scale: 0.95)) :
+                        .identity
                 )
                 .alert(item: $multipeerManager.connectionAlert) { (alert: ConnectionAlert) in
                     Alert(
@@ -83,8 +90,10 @@ struct ContentView: View {
                 }
             }
         }
-        .animation(multipeerManager.settings.animations ?
-            .spring(response: 0.6, dampingFraction: 0.8) : .none,
+        .animation(
+            multipeerManager.settings.animations ?
+                .easeInOut(duration: 0.3) :
+                .none,
             value: showMenu
         )
         .sheet(isPresented: $showProfileSetup) {

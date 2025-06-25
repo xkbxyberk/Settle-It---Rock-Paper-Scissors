@@ -26,6 +26,9 @@ struct GameOverView: View {
             // MARK: - Winner Section
             winnerSection
             
+            // MARK: - Final Standings
+            finalStandingsSection
+            
             // MARK: - Stats Section
             statsSection
             
@@ -45,14 +48,15 @@ struct GameOverView: View {
                 .font(.system(size: 80))
                 .scaleEffect(1.2)
             
-            Text("Oyun Bitti!")
+            Text("Turnuva Bitti!")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
-            Text("Turnuva tamamlandı")
+            Text("Tebrikler! Harika bir turnuva oldu.")
                 .font(.title3)
                 .foregroundColor(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
         }
     }
     
@@ -63,7 +67,7 @@ struct GameOverView: View {
             if let winner = winner {
                 // Kazanan var
                 VStack(spacing: 16) {
-                    // Winner avatar
+                    // Winner avatar with crown
                     ZStack {
                         Circle()
                             .fill(
@@ -79,9 +83,8 @@ struct GameOverView: View {
                                     .stroke(Color.white, lineWidth: 4)
                             )
                         
-                        Text(String(winner.displayName.prefix(2).uppercased()))
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                        Text(winner.avatar)
+                            .font(.system(size: 50))
                         
                         // Crown overlay
                         Text("👑")
@@ -90,7 +93,7 @@ struct GameOverView: View {
                     }
                     
                     VStack(spacing: 8) {
-                        Text("KAZANAN")
+                        Text("🏆 BÜYÜK KAZANAN")
                             .font(.headline)
                             .fontWeight(.bold)
                             .foregroundColor(.yellow)
@@ -101,7 +104,7 @@ struct GameOverView: View {
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                         
-                        Text("Tebrikler! 🎉")
+                        Text("Mükemmel performans! 🎉")
                             .font(.title2)
                             .foregroundColor(.white.opacity(0.9))
                     }
@@ -154,6 +157,49 @@ struct GameOverView: View {
         }
     }
     
+    // MARK: - Final Standings Section
+    private var finalStandingsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("🏅 Final Sıralaması")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            VStack(spacing: 8) {
+                // Kazanan (1. sıra)
+                if let winner = winner {
+                    PlayerStandingRow(
+                        position: 1,
+                        player: winner,
+                        isWinner: true
+                    )
+                }
+                
+                // Diğer oyuncular (son elemeler)
+                let otherPlayers = multipeerManager.gameState.players.filter { player in
+                    winner?.id != player.id
+                }
+                
+                ForEach(Array(otherPlayers.enumerated()), id: \.element.id) { index, player in
+                    PlayerStandingRow(
+                        position: index + 2,
+                        player: player,
+                        isWinner: false
+                    )
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+    
     // MARK: - Stats Section
     private var statsSection: some View {
         VStack(spacing: 16) {
@@ -189,10 +235,8 @@ struct GameOverView: View {
                 
                 // Oyun modu
                 VStack(spacing: 4) {
-                    Text(multipeerManager.gameState.gameMode?.rawValue.prefix(1).uppercased() ?? "?")
+                    Text(modeIcon)
                         .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.purple)
                     
                     Text("Oyun Modu")
                         .font(.caption)
@@ -216,8 +260,7 @@ struct GameOverView: View {
     private var actionButton: some View {
         VStack(spacing: 12) {
             Button(action: {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-                impactFeedback.impactOccurred()
+                multipeerManager.playHaptic(style: .heavy)
                 multipeerManager.resetGame()
             }) {
                 HStack(spacing: 12) {
@@ -240,10 +283,110 @@ struct GameOverView: View {
             .scaleEffect(1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: multipeerManager.gameState.gamePhase)
             
-            Text("Yeni bir turnuva başlatmak için lobiye dönün")
+            Text("Ana menüye dönmek için yeni turnuva başlatın")
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
+        }
+    }
+    
+    // MARK: - Helper Properties
+    private var modeIcon: String {
+        switch multipeerManager.gameState.gameMode {
+        case .dokunma: return "👆"
+        case .sallama: return "📱"
+        case .none: return "❓"
+        }
+    }
+}
+
+// MARK: - Player Standing Row
+struct PlayerStandingRow: View {
+    let position: Int
+    let player: Player
+    let isWinner: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Position
+            ZStack {
+                Circle()
+                    .fill(positionColor.opacity(0.3))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Circle()
+                            .stroke(positionColor, lineWidth: 2)
+                    )
+                
+                Text("\(position)")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(positionColor)
+            }
+            
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+                
+                Text(player.avatar)
+                    .font(.title3)
+                
+                // Crown for winner
+                if isWinner {
+                    Text("👑")
+                        .font(.caption)
+                        .offset(x: 12, y: -12)
+                }
+            }
+            
+            // Player info
+            VStack(alignment: .leading, spacing: 2) {
+                Text(player.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Text(isWinner ? "KAZANAN" : "Elendi")
+                    .font(.caption)
+                    .foregroundColor(isWinner ? .yellow : .white.opacity(0.6))
+            }
+            
+            Spacer()
+            
+            // Medal/Status
+            if isWinner {
+                Text("🏆")
+                    .font(.title2)
+            } else {
+                Image(systemName: "checkmark.circle")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.5))
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isWinner ? Color.yellow.opacity(0.15) : Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isWinner ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+    
+    private var positionColor: Color {
+        switch position {
+        case 1: return .yellow
+        case 2: return .gray
+        case 3: return .orange
+        default: return .white.opacity(0.6)
         }
     }
 }

@@ -9,13 +9,13 @@ struct ResultsView: View {
     /// Elenen oyuncuları hesaplar
     private var eliminatedPlayers: [Player] {
         // Choices'da olan ama activePlayers'da olmayan oyuncuları bul
-        let choicePlayerNames = Set(multipeerManager.gameState.choices.keys)
-        let activePlayerNames = Set(multipeerManager.gameState.activePlayers.map { $0.displayName })
-        let eliminatedNames = choicePlayerNames.subtracting(activePlayerNames)
+        let choicePlayerDeviceIDs = Set(multipeerManager.gameState.choices.keys)
+        let activePlayerDeviceIDs = Set(multipeerManager.gameState.activePlayers.map { $0.deviceID })
+        let eliminatedDeviceIDs = choicePlayerDeviceIDs.subtracting(activePlayerDeviceIDs)
         
         // Player objelerini bul
         return multipeerManager.gameState.players.filter { player in
-            eliminatedNames.contains(player.displayName)
+            eliminatedDeviceIDs.contains(player.deviceID)
         }
     }
     
@@ -149,38 +149,7 @@ struct ResultsView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            let choiceGroups = Dictionary(grouping: multipeerManager.gameState.choices) { $0.value }
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                ForEach([Choice.tas, .kagit, .makas], id: \.self) { choice in
-                    let players = choiceGroups[choice]?.map { $0.key } ?? []
-                    
-                    VStack(spacing: 8) {
-                        Text(getChoiceIcon(choice))
-                            .font(.system(size: 30))
-                        
-                        Text(choice.rawValue)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Text("\(players.count) oyuncu")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(players.isEmpty ? Color.white.opacity(0.05) : Color.white.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(players.isEmpty ? 0.1 : 0.3), lineWidth: 1)
-                            )
-                    )
-                    .opacity(players.isEmpty ? 0.5 : 1.0)
-                }
-            }
+            choicesGridView
         }
         .padding(20)
         .background(
@@ -191,6 +160,27 @@ struct ResultsView: View {
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
         )
+    }
+    
+    // MARK: - Choices Grid View
+    private var choicesGridView: some View {
+        let choiceGroups = Dictionary(grouping: multipeerManager.gameState.choices) { $0.value }
+        
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
+            ForEach([Choice.tas, .kagit, .makas], id: \.self) { choice in
+                ChoiceCardView(
+                    choice: choice,
+                    players: getPlayersForChoice(choice, from: choiceGroups)
+                )
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func getPlayersForChoice(_ choice: Choice, from choiceGroups: [Choice: [(key: String, value: Choice)]]) -> [Player] {
+        return choiceGroups[choice]?.compactMap { deviceID in
+            multipeerManager.gameState.players.first { $0.deviceID == deviceID.key }
+        } ?? []
     }
     
     // MARK: - Results Section
@@ -254,7 +244,7 @@ struct ResultsView: View {
                         ForEach(eliminatedPlayers, id: \.id) { player in
                             EliminatedPlayerRow(
                                 player: player,
-                                choice: multipeerManager.gameState.choices[player.displayName]
+                                choice: multipeerManager.gameState.choices[player.deviceID]
                             )
                         }
                     }
@@ -307,7 +297,7 @@ struct ResultsView: View {
                     ForEach(multipeerManager.gameState.activePlayers, id: \.id) { player in
                         ContinuingPlayerRow(
                             player: player,
-                            choice: multipeerManager.gameState.choices[player.displayName]
+                            choice: multipeerManager.gameState.choices[player.deviceID]
                         )
                     }
                 }
@@ -347,6 +337,80 @@ struct ResultsView: View {
     }
 }
 
+// MARK: - Choice Card View
+struct ChoiceCardView: View {
+    let choice: Choice
+    let players: [Player]
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(getChoiceIcon(choice))
+                .font(.system(size: 30))
+            
+            Text(choice.rawValue)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.white.opacity(0.9))
+            
+            Text("\(players.count) oyuncu")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.7))
+            
+            // Oyuncuların avatarları
+            if !players.isEmpty {
+                playersAvatarsView
+            }
+        }
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(players.isEmpty ? Color.white.opacity(0.05) : Color.white.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(players.isEmpty ? 0.1 : 0.3), lineWidth: 1)
+                )
+        )
+        .opacity(players.isEmpty ? 0.5 : 1.0)
+    }
+    
+    private var playersAvatarsView: some View {
+        HStack(spacing: -4) {
+            ForEach(players.prefix(3), id: \.id) { player in
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 20, height: 20)
+                    
+                    Text(player.avatar)
+                        .font(.system(size: 10))
+                }
+            }
+            
+            if players.count > 3 {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.3))
+                        .frame(width: 20, height: 20)
+                    
+                    Text("+\(players.count - 3)")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+            }
+        }
+    }
+    
+    private func getChoiceIcon(_ choice: Choice) -> String {
+        switch choice {
+        case .tas: return "🪨"
+        case .kagit: return "📄"
+        case .makas: return "✂️"
+        }
+    }
+}
+
 // MARK: - Eliminated Player Row
 struct EliminatedPlayerRow: View {
     let player: Player
@@ -355,15 +419,18 @@ struct EliminatedPlayerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            Circle()
-                .fill(Color.red.opacity(0.3))
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Text(String(player.displayName.prefix(1).uppercased()))
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                )
+            ZStack {
+                Circle()
+                    .fill(Color.red.opacity(0.3))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.red.opacity(0.5), lineWidth: 2)
+                    )
+                
+                Text(player.avatar)
+                    .font(.title3)
+            }
             
             // Player info
             VStack(alignment: .leading, spacing: 2) {
@@ -373,9 +440,18 @@ struct EliminatedPlayerRow: View {
                     .foregroundColor(.white)
                 
                 if let choice = choice {
-                    Text("Seçim: \(choice.rawValue)")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                    HStack(spacing: 4) {
+                        Text("Seçim:")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        Text(getChoiceIcon(choice))
+                            .font(.caption)
+                        
+                        Text(choice.rawValue)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
                 }
             }
             
@@ -385,7 +461,20 @@ struct EliminatedPlayerRow: View {
                 .font(.title3)
                 .foregroundColor(.red.opacity(0.8))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.red.opacity(0.1))
+        )
+    }
+    
+    private func getChoiceIcon(_ choice: Choice) -> String {
+        switch choice {
+        case .tas: return "🪨"
+        case .kagit: return "📄"
+        case .makas: return "✂️"
+        }
     }
 }
 
@@ -397,15 +486,18 @@ struct ContinuingPlayerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            Circle()
-                .fill(Color.blue.opacity(0.3))
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Text(String(player.displayName.prefix(1).uppercased()))
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                )
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.3))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.blue.opacity(0.5), lineWidth: 2)
+                    )
+                
+                Text(player.avatar)
+                    .font(.title3)
+            }
             
             // Player info
             VStack(alignment: .leading, spacing: 2) {
@@ -415,9 +507,18 @@ struct ContinuingPlayerRow: View {
                     .foregroundColor(.white)
                 
                 if let choice = choice {
-                    Text("Seçim: \(choice.rawValue)")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                    HStack(spacing: 4) {
+                        Text("Seçim:")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        Text(getChoiceIcon(choice))
+                            .font(.caption)
+                        
+                        Text(choice.rawValue)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
                 }
             }
             
@@ -427,7 +528,20 @@ struct ContinuingPlayerRow: View {
                 .font(.title3)
                 .foregroundColor(.blue.opacity(0.8))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.blue.opacity(0.1))
+        )
+    }
+    
+    private func getChoiceIcon(_ choice: Choice) -> String {
+        switch choice {
+        case .tas: return "🪨"
+        case .kagit: return "📄"
+        case .makas: return "✂️"
+        }
     }
 }
 

@@ -8,8 +8,14 @@ struct VotingView: View {
     
     /// Kullanıcının oy verip vermediğini kontrol eder
     private var hasUserVoted: Bool {
-        let currentUserName = multipeerManager.getCurrentPlayerName()
-        return multipeerManager.gameState.votes.keys.contains(currentUserName)
+        let currentDeviceID = multipeerManager.getCurrentUserDeviceID()
+        return multipeerManager.gameState.votes.keys.contains(currentDeviceID)
+    }
+    
+    /// Kullanıcının verdiği oy
+    private var userVote: GameMode? {
+        let currentDeviceID = multipeerManager.getCurrentUserDeviceID()
+        return multipeerManager.gameState.votes[currentDeviceID]
     }
     
     /// Oylama tamamlanma oranı
@@ -89,12 +95,10 @@ struct VotingView: View {
                 title: "👆 Dokunarak Seç",
                 subtitle: "Ekranınıza dokunarak seçim yapın",
                 gameMode: .dokunma,
-                isSelected: hasUserVoted && multipeerManager.gameState.votes[multipeerManager.getCurrentPlayerName()] == .dokunma,
-                isDisabled: hasUserVoted
+                isSelected: hasUserVoted && userVote == .dokunma,
+                isDisabled: hasUserVoted,
+                multipeerManager: multipeerManager
             ) {
-                // Haptic feedback
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
                 multipeerManager.castVote(mode: .dokunma)
             }
             
@@ -103,12 +107,10 @@ struct VotingView: View {
                 title: "📱 Sallayarak Oyna",
                 subtitle: "Cihazınızı sallayarak seçim yapın",
                 gameMode: .sallama,
-                isSelected: hasUserVoted && multipeerManager.gameState.votes[multipeerManager.getCurrentPlayerName()] == .sallama,
-                isDisabled: hasUserVoted
+                isSelected: hasUserVoted && userVote == .sallama,
+                isDisabled: hasUserVoted,
+                multipeerManager: multipeerManager
             ) {
-                // Haptic feedback
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
                 multipeerManager.castVote(mode: .sallama)
             }
         }
@@ -130,6 +132,12 @@ struct VotingView: View {
                     }
                     .font(.headline)
                     .foregroundColor(.white)
+                    
+                    if let vote = userVote {
+                        Text("Seçiminiz: \(vote.rawValue)")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                     
                     Text("Diğer oyuncuların oyları bekleniyor...")
                         .font(.subheadline)
@@ -180,28 +188,32 @@ struct VotingView: View {
     
     // MARK: - Voting Summary View
     private var votingSummaryView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("📊 Anlık Durum")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            // Her mode için oy sayısı
-            let dokunmaVotes = multipeerManager.gameState.votes.values.filter { $0 == .dokunma }.count
-            let sallamaVotes = multipeerManager.gameState.votes.values.filter { $0 == .sallama }.count
+            // Her mode için oy sayısı ve oyuncular
+            let dokunmaVoters = multipeerManager.gameState.votes.filter { $0.value == .dokunma }
+            let sallamaVoters = multipeerManager.gameState.votes.filter { $0.value == .sallama }
             
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("👆 Dokunma: \(dokunmaVotes)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
-                    
-                    Text("📱 Sallama: \(sallamaVotes)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
-                }
+            VStack(spacing: 12) {
+                // Dokunma oyları
+                VoteGroupView(
+                    icon: "👆",
+                    title: "Dokunma",
+                    voters: dokunmaVoters,
+                    allPlayers: multipeerManager.gameState.players
+                )
                 
-                Spacer()
+                // Sallama oyları
+                VoteGroupView(
+                    icon: "📱",
+                    title: "Sallama",
+                    voters: sallamaVoters,
+                    allPlayers: multipeerManager.gameState.players
+                )
             }
         }
         .padding(16)
@@ -216,6 +228,77 @@ struct VotingView: View {
     }
 }
 
+// MARK: - Vote Group View
+struct VoteGroupView: View {
+    let icon: String
+    let title: String
+    let voters: [String: GameMode] // DeviceID: GameMode
+    let allPlayers: [Player]
+    
+    var body: some View {
+        HStack {
+            // Icon ve başlık
+            HStack(spacing: 8) {
+                Text(icon)
+                    .font(.title2)
+                
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.9))
+                
+                Text("(\(voters.count))")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            
+            Spacer()
+            
+            // Oy veren oyuncuların avatarları
+            if !voters.isEmpty {
+                HStack(spacing: -8) {
+                    ForEach(Array(voters.keys.prefix(3)), id: \.self) { deviceID in
+                        if let player = allPlayers.first(where: { $0.deviceID == deviceID }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white.opacity(0.2))
+                                    .frame(width: 32, height: 32)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                                    )
+                                
+                                Text(player.avatar)
+                                    .font(.system(size: 16))
+                            }
+                        }
+                    }
+                    
+                    // Eğer 3'ten fazla oyuncu varsa +X göster
+                    if voters.count > 3 {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white.opacity(0.3))
+                                .frame(width: 32, height: 32)
+                            
+                            Text("+\(voters.count - 3)")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(voters.isEmpty ? 0.05 : 0.1))
+        )
+    }
+}
+
 // MARK: - Vote Option Button
 struct VoteOptionButton: View {
     let title: String
@@ -223,10 +306,16 @@ struct VoteOptionButton: View {
     let gameMode: GameMode
     let isSelected: Bool
     let isDisabled: Bool
+    let multipeerManager: MultipeerManager
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            if !isDisabled {
+                multipeerManager.playHaptic(style: .light)
+            }
+            action()
+        }) {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)

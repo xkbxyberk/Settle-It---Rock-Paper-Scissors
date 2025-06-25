@@ -1,6 +1,7 @@
 import Foundation
 import MultipeerConnectivity
 import CoreMotion
+import CoreHaptics
 
 // MARK: - MultipeerManager
 /// Ağ iletişimini yöneten ana sınıf
@@ -18,9 +19,21 @@ class MultipeerManager: NSObject, ObservableObject {
     @Published var settings = GameSettings.load() {
         didSet {
             settings.save()
-            // applySettings() burada çağrılmayacak çünkü sonsuz döngüye sebep olur
+            // Host ise ayarları diğer oyunculara gönder
+            if isHost {
+                sendHostSettings()
+            }
             print("⚙️ Ayarlar güncellendi")
         }
+    }
+    
+    // MARK: - Private Properties
+    /// Kullanıcı profili
+    private var userProfile = UserProfile.load()
+    
+    /// Bu cihazın host olup olmadığını belirler
+    var isHost: Bool {
+        return gameState.hostDeviceID == userProfile.deviceID
     }
     
     // MARK: - MultipeerConnectivity Properties
@@ -43,6 +56,10 @@ class MultipeerManager: NSObject, ObservableObject {
     /// Hareket algılama yöneticisi
     private let motionManager = CMMotionManager()
     
+    // MARK: - CoreHaptics Properties
+    /// Haptic feedback engine
+    private var hapticEngine: CHHapticEngine?
+    
     // MARK: - Initialization
     override init() {
         // Cihaz adını kullanarak peer ID oluştur
@@ -64,29 +81,130 @@ class MultipeerManager: NSObject, ObservableObject {
         serviceAdvertiser.delegate = self
         serviceBrowser.delegate = self
         
+        // Haptic engine'i başlat
+        setupHapticEngine()
+        
         // Ayarları uygula
         applySettings()
         
-        // Servisleri başlat (eğer ayarlarda autoConnect açıksa)
+        print("✅ MultipeerManager başlatıldı: \(userProfile.nickname) (\(userProfile.deviceID))")
+    }
+    
+    // MARK: - User Profile Management
+    /// Kullanıcı profilini günceller
+    func updateUserProfile(_ profile: UserProfile) {
+        userProfile = profile
+        userProfile.save()
+        
+        // Eğer oyunda varsa, oyuncu bilgilerini güncelle
+        updatePlayerInGameState()
+        
+        print("👤 Kullanıcı profili güncellendi: \(profile.nickname)")
+    }
+    
+    /// Mevcut kullanıcının Player nesnesini döndürür
+    func getCurrentPlayer() -> Player {
+        return userProfile.toPlayer()
+    }
+    
+    /// Mevcut kullanıcının cihaz ID'sini döndürür
+    func getCurrentUserDeviceID() -> String {
+        return userProfile.deviceID
+    }
+    
+    /// GameState'deki oyuncu bilgilerini günceller
+    private func updatePlayerInGameState() {
+        let currentPlayer = getCurrentPlayer()
+        
+        // Players listesinde güncelle
+        if let index = gameState.players.firstIndex(where: { $0.deviceID == userProfile.deviceID }) {
+            gameState.players[index] = currentPlayer
+        }
+        
+        // Active players listesinde güncelle
+        if let index = gameState.activePlayers.firstIndex(where: { $0.deviceID == userProfile.deviceID }) {
+            gameState.activePlayers[index] = currentPlayer
+        }
+        
+        // Diğer oyunculara bildir
+        let message = NetworkMessage.playerJoined(player: currentPlayer)
+        send(message: message)
+    }
+    
+    // MARK: - Room Management
+    /// Yeni oda oluşturur ve host olur
+    func createRoom(name: String) {
+        let room = GameRoom(hostDeviceID: userProfile.deviceID, roomName: name)
+        
+        gameState.currentRoom = room
+        gameState.hostDeviceID = userProfile.deviceID
+        
+        // Kendi oyuncuyu ekle
+        let currentPlayer = getCurrentPlayer()
+        gameState.players = [currentPlayer]
+        gameState.activePlayers = [currentPlayer]
+        
+        // Başarılı oda oluşturma haptic feedback
+        playHaptic(style: .success)
+        
+        // Servisleri başlat
         if settings.autoConnect {
             startAdvertising()
             startBrowsing()
-            
-            // Kendi oyuncuyu gameState'e ekle
-            let currentPlayer = Player(displayName: peerID.displayName)
+        }
+        
+        print("🏠 Oda oluşturuldu: \(name) (Kod: \(room.roomCode), Host: \(userProfile.nickname))")
+    }
+    
+    /// Oda kodunu kullanarak odaya katılmaya çalışır
+    func joinRoom(withCode code: String) {
+        print("🔑 Oda kodu ile katılma isteği: \(code)")
+        
+        // Servisleri başlat (oda arama için)
+        if settings.autoConnect {
+            startAdvertising()
+            startBrowsing()
+        }
+        
+        // Tüm bağlı cihazlara oda kodu gönder
+        let message = NetworkMessage.roomCodeRequest(code: code)
+        send(message: message)
+        
+        // Eğer hiç bağlı cihaz yoksa hata göster
+        if session.connectedPeers.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                if self.gameState.currentRoom == nil {
+                    self.connectionAlert = ConnectionAlert(
+                        title: "Oda Bulunamadı",
+                        message: "Bu koda sahip oda bulunamadı. Kodun doğru olduğundan emin ol."
+                    )
+                }
+            }
+        }
+    }
+    
+    /// Odaya katılır
+    func joinRoom(_ room: GameRoom) {
+        gameState.currentRoom = room
+        gameState.hostDeviceID = room.hostDeviceID
+        
+        // Kendi oyuncuyu ekle
+        let currentPlayer = getCurrentPlayer()
+        if !gameState.players.contains(where: { $0.deviceID == currentPlayer.deviceID }) {
             gameState.players.append(currentPlayer)
             gameState.activePlayers.append(currentPlayer)
         }
+        
+        // Odaya katılım haptic feedback
+        playHaptic(style: .success)
+        
+        print("🚪 Odaya katıldı: \(room.roomName) (Kod: \(room.roomCode))")
     }
     
     // MARK: - Settings Management
     /// Ayarları uygular
     private func applySettings() {
         print("⚙️ Ayarlar uygulanıyor...")
-        
-        // Bağlantı ayarları henüz tam desteklenmiyor
-        // Gelecekte Wi-Fi only veya Bluetooth only modu eklenebilir
-        
         print("✅ Ayarlar uygulandı")
     }
     
@@ -98,24 +216,138 @@ class MultipeerManager: NSObject, ObservableObject {
         print("✅ Ayarlar sıfırlandı")
     }
     
+    /// Host ayarlarını diğer oyunculara gönderir
+    private func sendHostSettings() {
+        guard isHost else { return }
+        
+        let hostSettings = HostGameSettings(from: settings)
+        let message = NetworkMessage.gameSettings(settings: hostSettings)
+        send(message: message)
+        
+        print("👑 Host ayarları gönderildi")
+    }
+    
     /// Haptic feedback çalar (ayarlarda açıksa)
-    func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+    func playHaptic(style: HapticStyle = .medium) {
         guard settings.hapticFeedback else { return }
-        let impactFeedback = UIImpactFeedbackGenerator(style: style)
-        impactFeedback.impactOccurred()
+        
+        // CoreHaptics kullan
+        if hapticEngine != nil {
+            playAdvancedHaptic(style: style)
+        } else {
+            // Fallback: UIImpactFeedbackGenerator
+            let intensity: UIImpactFeedbackGenerator.FeedbackStyle
+            switch style {
+            case .light: intensity = .light
+            case .medium: intensity = .medium
+            case .heavy: intensity = .heavy
+            case .success: intensity = .medium
+            case .warning: intensity = .heavy
+            case .error: intensity = .heavy
+            }
+            
+            let impactFeedback = UIImpactFeedbackGenerator(style: intensity)
+            impactFeedback.impactOccurred()
+        }
+    }
+    
+    /// CoreHaptics ile gelişmiş haptic feedback
+    private func playAdvancedHaptic(style: HapticStyle) {
+        guard let hapticEngine = hapticEngine else { return }
+        
+        var events: [CHHapticEvent] = []
+        
+        switch style {
+        case .light:
+            let event = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+            ], relativeTime: 0)
+            events.append(event)
+            
+        case .medium:
+            let event = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+            ], relativeTime: 0)
+            events.append(event)
+            
+        case .heavy:
+            let event = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.8)
+            ], relativeTime: 0)
+            events.append(event)
+            
+        case .success:
+            // Çifte titreşim (başarı için)
+            let event1 = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+            ], relativeTime: 0)
+            
+            let event2 = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.8),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+            ], relativeTime: 0.1)
+            
+            events.append(contentsOf: [event1, event2])
+            
+        case .warning:
+            // Uzun titreşim (uyarı için)
+            let event = CHHapticEvent(eventType: .hapticContinuous, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.4)
+            ], relativeTime: 0, duration: 0.3)
+            events.append(event)
+            
+        case .error:
+            // Üçlü sert titreşim (hata için)
+            for i in 0..<3 {
+                let event = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.9),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.9)
+                ], relativeTime: Double(i) * 0.1)
+                events.append(event)
+            }
+        }
+        
+        do {
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try hapticEngine.makePlayer(with: pattern)
+            try player.start(atTime: 0)
+        } catch {
+            print("❌ Haptic feedback hatası: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Haptic engine'i kurar
+    private func setupHapticEngine() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            print("⚠️ Bu cihaz haptic feedback desteklemiyor")
+            return
+        }
+        
+        do {
+            hapticEngine = try CHHapticEngine()
+            try hapticEngine?.start()
+            print("✅ Haptic engine başlatıldı")
+        } catch {
+            print("❌ Haptic engine başlatılamadı: \(error.localizedDescription)")
+        }
     }
     
     // MARK: - Service Management
     /// Advertiser servisini başlatır (kendini duyurur)
     private func startAdvertising() {
         serviceAdvertiser.startAdvertisingPeer()
-        print("🔊 Advertiser başlatıldı: \(peerID.displayName)")
+        print("🔊 Advertiser başlatıldı: \(userProfile.nickname)")
     }
     
     /// Browser servisini başlatır (diğerlerini arar)
     private func startBrowsing() {
         serviceBrowser.startBrowsingForPeers()
-        print("🔍 Browser başlatıldı: \(peerID.displayName)")
+        print("🔍 Browser başlatıldı: \(userProfile.nickname)")
     }
     
     /// Tüm servisleri durdurur
@@ -142,21 +374,55 @@ class MultipeerManager: NSObject, ObservableObject {
             // Tüm bağlı cihazlara gönder
             try session.send(data, toPeers: session.connectedPeers, with: .reliable)
             
-            print("📤 Mesaj gönderildi: \(message)")
+            // Debug output için message türünü kontrol et
+            switch message {
+            case .vote(let mode):
+                print("📤 Oy gönderildi: \(mode.rawValue)")
+            case .choice(let selection):
+                print("📤 Seçim gönderildi: \(selection.rawValue)")
+            case .playerJoined(let player):
+                print("📤 Oyuncu katıldı mesajı: \(player.displayName)")
+            case .playerLeft(let deviceID):
+                print("📤 Oyuncu ayrıldı mesajı: \(deviceID)")
+            case .roomCreated(let room):
+                print("📤 Oda oluşturuldu mesajı: \(room.roomName)")
+            case .gameSettings(_):
+                print("📤 Host ayarları gönderildi")
+            case .startGame:
+                print("📤 Oyun başlatma komutu gönderildi")
+            case .syncGameState(_):
+                print("📤 Oyun durumu senkronize edildi")
+            case .roomCodeRequest(let code):
+                print("📤 Oda kodu isteği gönderildi: \(code)")
+            case .roomCodeResponse(_, let success):
+                print("📤 Oda kodu yanıtı gönderildi: \(success)")
+            case .requestRoomInfo:
+                print("📤 Oda bilgisi istendi")
+            }
         } catch {
             print("❌ Mesaj gönderme hatası: \(error.localizedDescription)")
         }
     }
     
     // MARK: - Game Control Methods
-    /// Oyunu başlatır ve oylama aşamasına geçer
+    /// Oyunu başlatır ve oylama aşamasına geçer (Sadece host çağırabilir)
     func startGame() {
-        guard gameState.players.count >= 2 else {
-            print("⚠️ Oyun başlatılamadı: Yetersiz oyuncu sayısı (\(gameState.players.count))")
+        guard isHost else {
+            print("⚠️ Sadece host oyunu başlatabilir")
+            playHaptic(style: .error)
             return
         }
         
-        print("🎮 Oyun başlatılıyor")
+        guard gameState.players.count >= 2 else {
+            print("⚠️ Oyun başlatılamadı: Yetersiz oyuncu sayısı (\(gameState.players.count))")
+            playHaptic(style: .warning)
+            return
+        }
+        
+        print("🎮 Oyun başlatılıyor (Host: \(userProfile.nickname))")
+        
+        // Başarılı oyun başlatma haptic feedback
+        playHaptic(style: .success)
         
         // Eğer tercih edilen mod varsa, doğrudan geri sayıma geç
         if let preferredMode = settings.preferredGameMode {
@@ -177,33 +443,54 @@ class MultipeerManager: NSObject, ObservableObject {
         
         // Round sayısını sıfırla
         gameState.currentRound = 0
+        
+        // Diğer oyunculara oyun başlatma mesajı gönder
+        let message = NetworkMessage.startGame
+        send(message: message)
+        
+        // Game state'i senkronize et
+        syncGameState()
+    }
+    
+    /// Oyun durumunu tüm oyunculara gönderir
+    private func syncGameState() {
+        let message = NetworkMessage.syncGameState(state: gameState)
+        send(message: message)
     }
     
     /// Oy verme fonksiyonu
     func castVote(mode: GameMode) {
-        let currentPlayerName = getCurrentPlayerName()
+        let currentDeviceID = userProfile.deviceID
         
         // Daha önce oy verilmiş mi kontrol et
-        guard gameState.votes[currentPlayerName] == nil else {
-            print("⚠️ \(currentPlayerName) zaten oy vermiş")
+        guard gameState.votes[currentDeviceID] == nil else {
+            print("⚠️ \(userProfile.nickname) zaten oy vermiş")
+            playHaptic(style: .warning)
             return
         }
         
-        print("🗳️ \(currentPlayerName) oyunu: \(mode.rawValue)")
+        print("🗳️ \(userProfile.nickname) oyunu: \(mode.rawValue)")
+        
+        // Başarılı oy haptic feedback
+        playHaptic(style: .success)
         
         // Kendi oyunu yerel olarak ekle
-        gameState.votes[currentPlayerName] = mode
+        gameState.votes[currentDeviceID] = mode
         
         // Ağ üzerinden diğer cihazlara gönder
         let voteMessage = NetworkMessage.vote(mode: mode)
         send(message: voteMessage)
         
         // Oylama tamamlandı mı kontrol et
-        checkVotingCompletion()
+        if isHost {
+            checkVotingCompletion()
+        }
     }
     
-    /// Oylamanın tamamlanıp tamamlanmadığını kontrol eder
+    /// Oylamanın tamamlanıp tamamlanmadığını kontrol eder (Sadece host)
     private func checkVotingCompletion() {
+        guard isHost else { return }
+        
         guard gameState.votes.count == gameState.players.count else {
             print("🗳️ Oylama devam ediyor: \(gameState.votes.count)/\(gameState.players.count)")
             return
@@ -240,13 +527,24 @@ class MultipeerManager: NSObject, ObservableObject {
         gameState.gameMode = winningMode
         gameState.gamePhase = .geriSayim
         
+        // Oylama tamamlanma haptic feedback
+        playHaptic(style: .success)
+        
         print("🏆 Kazanan mod: \(winningMode.rawValue)")
         print("⏰ Geri sayım aşamasına geçildi")
+        
+        // Game state'i senkronize et
+        syncGameState()
     }
     
     /// Turu başlatır - gamePhase'i .turOynaniyor olarak değiştirir
     func startRound() {
+        guard isHost else { return }
+        
         print("🎯 Tur başlatılıyor - Oyuncular seçim yapabilir")
+        
+        // Tur başlama haptic feedback
+        playHaptic(style: .medium)
         
         // Tur sayısını artır
         gameState.currentRound += 1
@@ -257,6 +555,9 @@ class MultipeerManager: NSObject, ObservableObject {
         // Choices'ları temizle (yeni tur için)
         gameState.choices.removeAll()
         
+        // Game state'i senkronize et
+        syncGameState()
+        
         // Eğer sallama modu aktifse, hareket algılamayı başlat
         if gameState.gameMode == .sallama {
             startMotionDetection()
@@ -265,35 +566,44 @@ class MultipeerManager: NSObject, ObservableObject {
     
     /// Seçim yapma fonksiyonu
     func makeChoice(choice: Choice) {
-        let currentPlayerName = getCurrentPlayerName()
+        let currentDeviceID = userProfile.deviceID
         
         // Daha önce seçim yapılmış mı kontrol et
-        guard gameState.choices[currentPlayerName] == nil else {
-            print("⚠️ \(currentPlayerName) zaten seçim yapmış")
+        guard gameState.choices[currentDeviceID] == nil else {
+            print("⚠️ \(userProfile.nickname) zaten seçim yapmış")
+            playHaptic(style: .warning)
             return
         }
         
         // Oyuncunun active players listesinde olup olmadığını kontrol et
-        guard gameState.activePlayers.contains(where: { $0.displayName == currentPlayerName }) else {
-            print("⚠️ \(currentPlayerName) aktif oyuncu değil")
+        guard gameState.activePlayers.contains(where: { $0.deviceID == currentDeviceID }) else {
+            print("⚠️ \(userProfile.nickname) aktif oyuncu değil")
+            playHaptic(style: .error)
             return
         }
         
-        print("✂️ \(currentPlayerName) seçimi: \(choice.rawValue)")
+        print("✂️ \(userProfile.nickname) seçimi: \(choice.rawValue)")
+        
+        // Başarılı seçim haptic feedback
+        playHaptic(style: .success)
         
         // Kendi seçimini yerel olarak ekle
-        gameState.choices[currentPlayerName] = choice
+        gameState.choices[currentDeviceID] = choice
         
         // Ağ üzerinden diğer cihazlara gönder
         let choiceMessage = NetworkMessage.choice(selection: choice)
         send(message: choiceMessage)
         
-        // Tur tamamlandı mı kontrol et
-        checkRoundCompletion()
+        // Tur tamamlandı mı kontrol et (sadece host)
+        if isHost {
+            checkRoundCompletion()
+        }
     }
     
-    /// Turun tamamlanıp tamamlanmadığını kontrol eder
+    /// Turun tamamlanıp tamamlanmadığını kontrol eder (Sadece host)
     private func checkRoundCompletion() {
+        guard isHost else { return }
+        
         guard gameState.choices.count == gameState.activePlayers.count else {
             print("✂️ Tur devam ediyor: \(gameState.choices.count)/\(gameState.activePlayers.count)")
             return
@@ -308,13 +618,15 @@ class MultipeerManager: NSObject, ObservableObject {
         processRoundResults()
     }
     
-    /// Tur sonuçlarını işler ve eleme algoritmasını çalıştırır
+    /// Tur sonuçlarını işler ve eleme algoritmasını çalıştırır (Sadece host)
     private func processRoundResults() {
+        guard isHost else { return }
+        
         print("🧮 Eleme algoritması çalıştırılıyor...")
         
         // Sadece aktif oyuncuların seçimlerini al
         let activePlayerChoices = gameState.choices.filter { choice in
-            gameState.activePlayers.contains { $0.displayName == choice.key }
+            gameState.activePlayers.contains { $0.deviceID == choice.key }
         }
         
         // Teknik analizde belirtilen eleme algoritması
@@ -340,14 +652,26 @@ class MultipeerManager: NSObject, ObservableObject {
         // Oyun sonuç aşamasına geç
         gameState.gamePhase = .sonucGosteriliyor
         
+        // Tur sonucu haptic feedback
+        if eliminatedPlayers.isEmpty {
+            playHaptic(style: .light) // Kimse elenmedi
+        } else {
+            playHaptic(style: .warning) // Eliminasyon var
+        }
+        
+        // Game state'i senkronize et
+        syncGameState()
+        
         // 3 saniye sonra sonraki adıma geç
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             self.proceedToNextPhase()
         }
     }
     
-    /// Sonraki aşamaya geçer (yeni tur veya oyun sonu)
+    /// Sonraki aşamaya geçer (yeni tur veya oyun sonu) (Sadece host)
     private func proceedToNextPhase() {
+        guard isHost else { return }
+        
         print("🔄 Sonraki aşamaya geçiliyor...")
         
         if gameState.activePlayers.count > 1 {
@@ -366,12 +690,18 @@ class MultipeerManager: NSObject, ObservableObject {
             print("🏆 Oyun tamamlandı!")
             gameState.gamePhase = .oyunBitti
             
+            // Oyun bitişi haptic feedback
+            playHaptic(style: .success)
+            
             if let winner = gameState.activePlayers.first {
                 print("🥇 Kazanan: \(winner.displayName)")
             } else {
                 print("🤷‍♂️ Kazanan yok")
             }
         }
+        
+        // Game state'i senkronize et
+        syncGameState()
     }
     
     /// Oyunu sıfırlar ve ana menüye döner
@@ -400,13 +730,10 @@ class MultipeerManager: NSObject, ObservableObject {
         print("🔄 Servisler yeniden başlatılıyor...")
         
         // Servisleri yeniden başlat
-        startAdvertising()
-        startBrowsing()
-        
-        // Kendi oyuncuyu gameState'e ekle
-        let currentPlayer = Player(displayName: peerID.displayName)
-        gameState.players.append(currentPlayer)
-        gameState.activePlayers.append(currentPlayer)
+        if settings.autoConnect {
+            startAdvertising()
+            startBrowsing()
+        }
         
         print("✅ Servisler aktif, lobi hazır")
     }
@@ -450,7 +777,7 @@ class MultipeerManager: NSObject, ObservableObject {
             var continuingPlayers: [Player] = []
             
             for player in gameState.activePlayers {
-                if let playerChoice = choices[player.displayName] {
+                if let playerChoice = choices[player.deviceID] {
                     if playerChoice == losingChoice {
                         eliminatedPlayers.append(player)
                     } else {
@@ -495,23 +822,6 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
     
-    /// Oyunun bitip bitmediğini kontrol eder
-    private func checkGameCompletion() {
-        if gameState.activePlayers.count <= 1 {
-            // Oyun bitti
-            gameState.gamePhase = .oyunBitti
-            print("🏆 Oyun bitti!")
-            if let winner = gameState.activePlayers.first {
-                print("🥇 Kazanan: \(winner.displayName)")
-            }
-        } else {
-            // Yeni tur başlat
-            print("🔄 Yeni tur başlatılıyor...")
-            gameState.gamePhase = .geriSayim
-            gameState.choices.removeAll() // Choices'ları temizle
-        }
-    }
-    
     // MARK: - Motion Detection Methods
     /// Hareket algılamayı başlatır (sallama modu için)
     func startMotionDetection() {
@@ -535,14 +845,18 @@ class MultipeerManager: NSObject, ObservableObject {
                 return
             }
             
-            // Sallama tespiti - herhangi bir eksende 1.5g'den fazla ivme
+            // Sallama tespiti - kullanıcının hassasiyet ayarını kullan
             let acceleration = data.acceleration
-            let isShaking = abs(acceleration.x) > 1.5 ||
-                           abs(acceleration.y) > 1.5 ||
-                           abs(acceleration.z) > 1.5
+            let threshold = self.settings.shakeSensitivity
+            let isShaking = abs(acceleration.x) > threshold ||
+                           abs(acceleration.y) > threshold ||
+                           abs(acceleration.z) > threshold
             
             if isShaking {
-                print("🔄 Sallama tespit edildi! (x: \(acceleration.x), y: \(acceleration.y), z: \(acceleration.z))")
+                print("🔄 Sallama tespit edildi! (threshold: \(threshold))")
+                
+                // Sallama haptic feedback
+                self.playHaptic(style: .medium)
                 
                 // Tekrar algılamayı önlemek için hemen durdur
                 self.stopMotionDetection()
@@ -565,32 +879,27 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
     
-    /// Mevcut oyuncunun adını döndürür
-    func getCurrentPlayerName() -> String {
-        return peerID.displayName
-    }
-    
     // MARK: - Helper Methods
     /// PeerID'den Player nesnesi bulur
     private func findPlayer(by peerID: MCPeerID) -> Player? {
-        return gameState.players.first { $0.displayName == peerID.displayName }
+        return gameState.players.first { $0.deviceID == peerID.displayName }
     }
     
     /// Oyuncuyu gameState'den güvenli şekilde kaldırır
     private func removePlayer(by peerID: MCPeerID) {
-        let displayName = peerID.displayName
+        let deviceID = peerID.displayName
         
         // Players listesinden kaldır
-        gameState.players.removeAll { $0.displayName == displayName }
+        gameState.players.removeAll { $0.deviceID == deviceID }
         
         // Active players listesinden kaldır
-        gameState.activePlayers.removeAll { $0.displayName == displayName }
+        gameState.activePlayers.removeAll { $0.deviceID == deviceID }
         
         // Votes ve choices'lardan kaldır
-        gameState.votes.removeValue(forKey: displayName)
-        gameState.choices.removeValue(forKey: displayName)
+        gameState.votes.removeValue(forKey: deviceID)
+        gameState.choices.removeValue(forKey: deviceID)
         
-        print("🚫 Oyuncu kaldırıldı: \(displayName)")
+        print("🚫 Oyuncu kaldırıldı: \(deviceID)")
     }
 }
 
@@ -602,23 +911,27 @@ extension MultipeerManager: MCSessionDelegate {
         DispatchQueue.main.async {
             switch state {
             case .connected:
-                print("✅ Oyuncu bağlandı: \(peerID.displayName)")
+                print("✅ Cihaz bağlandı: \(peerID.displayName)")
                 
-                // Yeni oyuncuyu ekle (eğer zaten yoksa)
-                if !self.gameState.players.contains(where: { $0.displayName == peerID.displayName }) {
-                    let newPlayer = Player(displayName: peerID.displayName)
-                    self.gameState.players.append(newPlayer)
-                    self.gameState.activePlayers.append(newPlayer)
+                // Eğer host ise, mevcut oyun durumunu yeni oyuncuya gönder
+                if self.isHost && self.gameState.currentRoom != nil {
+                    self.syncGameState()
+                    self.sendHostSettings()
                 }
                 
             case .notConnected:
-                print("❌ Oyuncu bağlantısı koptu: \(peerID.displayName)")
+                print("❌ Cihaz bağlantısı koptu: \(peerID.displayName)")
+                
+                // Bağlantı kopma haptic feedback
+                self.playHaptic(style: .error)
                 
                 // Kullanıcıya bildirim göster
-                self.connectionAlert = ConnectionAlert(
-                    title: "Bağlantı Koptu",
-                    message: "\(peerID.displayName) oyundan ayrıldı ve elendi."
-                )
+                if let player = self.findPlayer(by: peerID) {
+                    self.connectionAlert = ConnectionAlert(
+                        title: "Bağlantı Koptu",
+                        message: "\(player.displayName) oyundan ayrıldı ve elendi."
+                    )
+                }
                 
                 // Oyuncuyu kaldır
                 self.removePlayer(by: peerID)
@@ -637,6 +950,9 @@ extension MultipeerManager: MCSessionDelegate {
     
     /// Oyuncu bağlantısı koptuğunda oyunun devamını sağlar
     private func handlePlayerDisconnection() {
+        // Host checks
+        guard isHost else { return }
+        
         // Eğer oylama aşamasındaysak ve tüm kalan oyuncular oy verdiyse
         if gameState.gamePhase == .oylama && gameState.votes.count == gameState.players.count {
             print("🗳️ Oyuncu kopmasına rağmen oylama tamamlandı")
@@ -652,7 +968,9 @@ extension MultipeerManager: MCSessionDelegate {
         // Eğer çok az oyuncu kaldıysa oyunu bitir
         if gameState.players.count < 2 {
             print("⚠️ Yetersiz oyuncu kaldı - Oyun sonlandırılıyor")
+            playHaptic(style: .error)
             gameState.gamePhase = .oyunBitti
+            syncGameState()
         }
     }
     
@@ -672,42 +990,133 @@ extension MultipeerManager: MCSessionDelegate {
     
     /// Alınan mesajı işler
     private func handleReceivedMessage(_ message: NetworkMessage, from peerID: MCPeerID) {
-        let displayName = peerID.displayName
-        
         switch message {
-        case .vote(let mode):
-            print("🗳️ \(displayName) oyunu: \(mode.rawValue)")
+        case .playerJoined(let player):
+            print("👤 Oyuncu katıldı: \(player.displayName)")
             
-            // Daha önce oy verilmiş mi kontrol et
-            guard gameState.votes[displayName] == nil else {
-                print("⚠️ \(displayName) zaten oy vermiş, tekrar oy sayılmayacak")
+            // Yeni oyuncu katılma haptic feedback
+            playHaptic(style: .light)
+            
+            // Oyuncu zaten listede mi kontrol et
+            if !gameState.players.contains(where: { $0.deviceID == player.deviceID }) {
+                gameState.players.append(player)
+                gameState.activePlayers.append(player)
+            } else {
+                // Oyuncu bilgilerini güncelle
+                if let index = gameState.players.firstIndex(where: { $0.deviceID == player.deviceID }) {
+                    gameState.players[index] = player
+                }
+                if let index = gameState.activePlayers.firstIndex(where: { $0.deviceID == player.deviceID }) {
+                    gameState.activePlayers[index] = player
+                }
+            }
+            
+        case .playerLeft(let deviceID):
+            print("👋 Oyuncu ayrıldı: \(deviceID)")
+            gameState.players.removeAll { $0.deviceID == deviceID }
+            gameState.activePlayers.removeAll { $0.deviceID == deviceID }
+            
+        case .roomCreated(let room):
+            print("🏠 Oda bilgisi alındı: \(room.roomName)")
+            joinRoom(room)
+            
+        case .gameSettings(let hostSettings):
+            print("👑 Host ayarları alındı")
+            // Sadece host'a ait ayarları uygula
+            settings.countdownDuration = hostSettings.countdownDuration
+            settings.preferredGameMode = hostSettings.preferredGameMode
+            
+        case .startGame:
+            print("🎮 Oyun başlatma komutu alındı")
+            // Host değilse game state'i bekle
+            
+        case .syncGameState(let state):
+            print("🔄 Oyun durumu senkronize edildi")
+            gameState = state
+            
+        case .roomCodeRequest(let code):
+            print("🔑 Oda kodu isteği alındı: \(code)")
+            
+            // Eğer host isek ve oda kodumuz eşleşiyorsa odamızı paylaş
+            if isHost, let currentRoom = gameState.currentRoom, currentRoom.roomCode == code {
+                print("✅ Oda kodu eşleşti, oda bilgisi gönderiliyor")
+                let response = NetworkMessage.roomCodeResponse(room: currentRoom, success: true)
+                send(message: response)
+            } else {
+                print("❌ Oda kodu eşleşmedi")
+                let response = NetworkMessage.roomCodeResponse(room: nil, success: false)
+                send(message: response)
+            }
+            
+        case .roomCodeResponse(let room, let success):
+            print("🔍 Oda kodu yanıtı: \(success)")
+            
+            if success, let foundRoom = room {
+                // Oda bulundu, katıl
+                joinRoom(foundRoom)
+                
+                // Başarılı katılım haptic feedback
+                playHaptic(style: .success)
+                
+                // Kendi bilgilerini host'a gönder
+                let currentPlayer = getCurrentPlayer()
+                let joinMessage = NetworkMessage.playerJoined(player: currentPlayer)
+                send(message: joinMessage)
+            } else {
+                // Oda bulunamadı
+                playHaptic(style: .error)
+                connectionAlert = ConnectionAlert(
+                    title: "Oda Bulunamadı",
+                    message: "Bu koda sahip oda bulunamadı. Kodun doğru olduğundan emin ol."
+                )
+            }
+            
+        case .requestRoomInfo:
+            print("📋 Oda bilgisi istendi")
+            
+            // Eğer host isek oda bilgimizi paylaş
+            if isHost, let currentRoom = gameState.currentRoom {
+                let response = NetworkMessage.roomCreated(room: currentRoom)
+                send(message: response)
+            }
+            
+        case .vote(let mode):
+            print("🗳️ Oy alındı: \(mode.rawValue)")
+            let deviceID = peerID.displayName
+            
+            guard gameState.votes[deviceID] == nil else {
+                print("⚠️ \(deviceID) zaten oy vermiş")
                 return
             }
             
-            gameState.votes[displayName] = mode
+            gameState.votes[deviceID] = mode
             
-            // Oylama tamamlandı mı kontrol et
-            checkVotingCompletion()
+            // Host ise oylama kontrolü yap
+            if isHost {
+                checkVotingCompletion()
+            }
             
         case .choice(let selection):
-            print("✂️ \(displayName) seçimi: \(selection.rawValue)")
+            print("✂️ Seçim alındı: \(selection.rawValue)")
+            let deviceID = peerID.displayName
             
-            // Daha önce seçim yapılmış mı kontrol et
-            guard gameState.choices[displayName] == nil else {
-                print("⚠️ \(displayName) zaten seçim yapmış, tekrar sayılmayacak")
+            guard gameState.choices[deviceID] == nil else {
+                print("⚠️ \(deviceID) zaten seçim yapmış")
                 return
             }
             
             // Oyuncunun active players listesinde olup olmadığını kontrol et
-            guard gameState.activePlayers.contains(where: { $0.displayName == displayName }) else {
-                print("⚠️ \(displayName) aktif oyuncu değil")
+            guard gameState.activePlayers.contains(where: { $0.deviceID == deviceID }) else {
+                print("⚠️ \(deviceID) aktif oyuncu değil")
                 return
             }
             
-            gameState.choices[displayName] = selection
+            gameState.choices[deviceID] = selection
             
-            // Tur tamamlandı mı kontrol et
-            checkRoundCompletion()
+            // Host ise tur kontrolü yap
+            if isHost {
+                checkRoundCompletion()
+            }
         }
     }
     
@@ -736,6 +1145,20 @@ extension MultipeerManager: MCNearbyServiceAdvertiserDelegate {
         
         // Otomatik olarak daveti kabul et
         invitationHandler(true, session)
+        
+        // Kısa bir gecikme ile bilgi paylaşımı yap
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Eğer host isek oda bilgimizi paylaş
+            if self.isHost, let currentRoom = self.gameState.currentRoom {
+                let roomMessage = NetworkMessage.roomCreated(room: currentRoom)
+                self.send(message: roomMessage)
+            }
+            
+            // Kendi oyuncu bilgilerini gönder
+            let currentPlayer = self.getCurrentPlayer()
+            let playerMessage = NetworkMessage.playerJoined(player: currentPlayer)
+            self.send(message: playerMessage)
+        }
     }
 }
 
@@ -762,4 +1185,15 @@ struct ConnectionAlert: Identifiable {
     let id = UUID()
     let title: String
     let message: String
+}
+
+// MARK: - Haptic Style
+/// Haptic feedback türleri
+enum HapticStyle {
+    case light    // Hafif dokunuş
+    case medium   // Orta dokunuş
+    case heavy    // Sert dokunuş
+    case success  // Başarı (çifte)
+    case warning  // Uyarı (uzun)
+    case error    // Hata (üçlü)
 }

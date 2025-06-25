@@ -14,8 +14,14 @@ struct GamePlayView: View {
     
     /// Kullanıcının seçim yapıp yapmadığını kontrol eder
     private var hasUserMadeChoice: Bool {
-        let currentUserName = multipeerManager.getCurrentPlayerName()
-        return multipeerManager.gameState.choices.keys.contains(currentUserName)
+        let currentDeviceID = multipeerManager.getCurrentUserDeviceID()
+        return multipeerManager.gameState.choices.keys.contains(currentDeviceID)
+    }
+    
+    /// Kullanıcının yaptığı seçim
+    private var userChoice: Choice? {
+        let currentDeviceID = multipeerManager.getCurrentUserDeviceID()
+        return multipeerManager.gameState.choices[currentDeviceID]
     }
     
     /// Tur tamamlanma oranı
@@ -60,6 +66,10 @@ struct GamePlayView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
             }
+            
+            Text("\(multipeerManager.gameState.activePlayers.count) oyuncu yarışıyor")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.6))
         }
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
@@ -117,11 +127,17 @@ struct GamePlayView: View {
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: countdown)
             }
             
-            if let gameMode = multipeerManager.gameState.gameMode {
-                Text("Mod: \(gameMode.rawValue)")
-                    .font(.title2)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.8))
+            VStack(spacing: 8) {
+                if let gameMode = multipeerManager.gameState.gameMode {
+                    Text("Mod: \(gameMode.rawValue)")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                
+                Text("Seçiminizi yapmaya hazırlanın!")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
             }
         }
     }
@@ -162,12 +178,57 @@ struct GamePlayView: View {
                 .background(Color.white.opacity(0.3))
                 .cornerRadius(4)
             
-            Text("\(multipeerManager.gameState.choices.count) / \(multipeerManager.gameState.activePlayers.count) seçim tamamlandı")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.white.opacity(0.9))
+            HStack {
+                Text("Seçim yapan: \(multipeerManager.gameState.choices.count)/\(multipeerManager.gameState.activePlayers.count)")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.9))
+                
+                Spacer()
+                
+                // Seçim yapan oyuncuların avatarları
+                if !multipeerManager.gameState.choices.isEmpty {
+                    playersWhoMadeChoicesView
+                }
+            }
         }
         .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Players Who Made Choices View
+    private var playersWhoMadeChoicesView: some View {
+        HStack(spacing: -6) {
+            ForEach(Array(multipeerManager.gameState.choices.keys.prefix(4)), id: \.self) { deviceID in
+                if let player = multipeerManager.gameState.activePlayers.first(where: { $0.deviceID == deviceID }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.3))
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.green, lineWidth: 2)
+                            )
+                        
+                        Text(player.avatar)
+                            .font(.system(size: 12))
+                    }
+                }
+            }
+            
+            // Eğer 4'ten fazla oyuncu varsa +X göster
+            if multipeerManager.gameState.choices.count > 4 {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.4))
+                        .frame(width: 28, height: 28)
+                    
+                    Text("+\(multipeerManager.gameState.choices.count - 4)")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+            }
+        }
     }
     
     // MARK: - Game Mode Content View
@@ -197,11 +258,10 @@ struct GamePlayView: View {
                     choice: .tas,
                     icon: "🪨",
                     title: "TAŞ",
-                    isSelected: hasUserMadeChoice && multipeerManager.gameState.choices[multipeerManager.getCurrentPlayerName()] == .tas,
-                    isDisabled: hasUserMadeChoice
+                    isSelected: hasUserMadeChoice && userChoice == .tas,
+                    isDisabled: hasUserMadeChoice,
+                    multipeerManager: multipeerManager
                 ) {
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
                     multipeerManager.makeChoice(choice: .tas)
                 }
                 
@@ -209,11 +269,10 @@ struct GamePlayView: View {
                     choice: .kagit,
                     icon: "📄",
                     title: "KAĞIT",
-                    isSelected: hasUserMadeChoice && multipeerManager.gameState.choices[multipeerManager.getCurrentPlayerName()] == .kagit,
-                    isDisabled: hasUserMadeChoice
+                    isSelected: hasUserMadeChoice && userChoice == .kagit,
+                    isDisabled: hasUserMadeChoice,
+                    multipeerManager: multipeerManager
                 ) {
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
                     multipeerManager.makeChoice(choice: .kagit)
                 }
                 
@@ -221,11 +280,10 @@ struct GamePlayView: View {
                     choice: .makas,
                     icon: "✂️",
                     title: "MAKAS",
-                    isSelected: hasUserMadeChoice && multipeerManager.gameState.choices[multipeerManager.getCurrentPlayerName()] == .makas,
-                    isDisabled: hasUserMadeChoice
+                    isSelected: hasUserMadeChoice && userChoice == .makas,
+                    isDisabled: hasUserMadeChoice,
+                    multipeerManager: multipeerManager
                 ) {
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
                     multipeerManager.makeChoice(choice: .makas)
                 }
             }
@@ -260,6 +318,18 @@ struct GamePlayView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
+                
+                // Hassasiyet göstergesi
+                HStack(spacing: 8) {
+                    Image(systemName: "gauge")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.6))
+                    
+                    Text("Hassasiyet: \(shakeSensitivityText)")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                .padding(.top, 8)
             }
             .padding(.vertical, 30)
             .frame(maxWidth: .infinity)
@@ -290,6 +360,12 @@ struct GamePlayView: View {
                     }
                     .font(.headline)
                     .foregroundColor(.white)
+                    
+                    if let choice = userChoice {
+                        Text("Seçiminiz: \(choice.rawValue) \(getChoiceIcon(choice))")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                     
                     Text("Diğer oyuncular bekleniyor...")
                         .font(.subheadline)
@@ -346,12 +422,14 @@ struct GamePlayView: View {
                 
                 // Haptic feedback (son 3 saniyede)
                 if countdown <= 3 {
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                    impactFeedback.impactOccurred()
+                    multipeerManager.playHaptic(style: .light)
                 }
             } else {
                 stopCountdownTimer()
-                multipeerManager.startRound()
+                // Sadece host tur başlatabilir
+                if multipeerManager.isHost {
+                    multipeerManager.startRound()
+                }
             }
         }
     }
@@ -359,6 +437,24 @@ struct GamePlayView: View {
     private func stopCountdownTimer() {
         countdownTimer?.invalidate()
         countdownTimer = nil
+    }
+    
+    // MARK: - Helper Methods
+    private func getChoiceIcon(_ choice: Choice) -> String {
+        switch choice {
+        case .tas: return "🪨"
+        case .kagit: return "📄"
+        case .makas: return "✂️"
+        }
+    }
+    
+    private var shakeSensitivityText: String {
+        switch multipeerManager.settings.shakeSensitivity {
+        case 1.0...1.5: return "Düşük"
+        case 1.5...2.0: return "Normal"
+        case 2.0...2.5: return "Yüksek"
+        default: return "Çok Yüksek"
+        }
     }
 }
 
@@ -369,10 +465,16 @@ struct ChoiceButton: View {
     let title: String
     let isSelected: Bool
     let isDisabled: Bool
+    let multipeerManager: MultipeerManager
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            if !isDisabled {
+                multipeerManager.playHaptic(style: .medium)
+            }
+            action()
+        }) {
             HStack(spacing: 16) {
                 Text(icon)
                     .font(.system(size: 40))

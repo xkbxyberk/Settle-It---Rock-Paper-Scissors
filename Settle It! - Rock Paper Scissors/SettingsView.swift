@@ -28,8 +28,13 @@ struct SettingsView: View {
                         // MARK: - Connection Settings
                         connectionSettingsSection
                         
-                        // MARK: - Game Settings
-                        gameSettingsSection
+                        // MARK: - Host Settings (only if host)
+                        if multipeerManager.isHost {
+                            hostSettingsSection
+                        }
+                        
+                        // MARK: - Personal Settings
+                        personalSettingsSection
                         
                         // MARK: - Experience Settings
                         experienceSettingsSection
@@ -103,19 +108,25 @@ struct SettingsView: View {
         ) {
             VStack(spacing: 16) {
                 
-                // Connection Type Picker
-                SettingRow(
-                    icon: "antenna.radiowaves.left.and.right",
-                    title: "Bağlantı Türü",
-                    subtitle: multipeerManager.settings.connectionType.rawValue
-                ) {
-                    Picker("Bağlantı Türü", selection: $multipeerManager.settings.connectionType) {
+                // Connection Type with Icons
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Bağlantı Türü")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                    
+                    HStack(spacing: 12) {
                         ForEach(ConnectionType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
+                            ConnectionTypeButton(
+                                type: type,
+                                isSelected: multipeerManager.settings.connectionType == type
+                            ) {
+                                multipeerManager.settings.connectionType = type
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                impactFeedback.impactOccurred()
+                            }
                         }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .colorScheme(.dark)
                 }
                 
                 // Auto Connect Toggle
@@ -131,14 +142,22 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Game Settings Section
-    private var gameSettingsSection: some View {
+    // MARK: - Host Settings Section (Only for Host)
+    private var hostSettingsSection: some View {
         SettingsSection(
-            title: "🎮 Oyun Ayarları",
+            title: "👑 Host Ayarları",
             delay: 0.6,
             isAnimated: animateContent
         ) {
             VStack(spacing: 16) {
+                
+                // Host Info
+                InfoRow(
+                    icon: "crown.fill",
+                    title: "Sen bu odanın host'usun",
+                    subtitle: "Bu ayarlar tüm oyuncular için geçerli olacak",
+                    color: .yellow
+                )
                 
                 // Countdown Duration
                 SettingRow(
@@ -165,8 +184,20 @@ struct SettingsView: View {
                     .pickerStyle(MenuPickerStyle())
                     .foregroundColor(.blue)
                 }
+            }
+        }
+    }
+    
+    // MARK: - Personal Settings Section
+    private var personalSettingsSection: some View {
+        SettingsSection(
+            title: "👤 Kişisel Ayarlar",
+            delay: multipeerManager.isHost ? 0.7 : 0.6,
+            isAnimated: animateContent
+        ) {
+            VStack(spacing: 16) {
                 
-                // Shake Sensitivity (only for shake mode)
+                // Shake Sensitivity (personal setting)
                 SettingRow(
                     icon: "iphone.shake",
                     title: "Sallama Hassasiyeti",
@@ -175,6 +206,13 @@ struct SettingsView: View {
                     Slider(value: $multipeerManager.settings.shakeSensitivity, in: 1.0...3.0, step: 0.5)
                         .tint(.purple)
                 }
+                
+                InfoRow(
+                    icon: "info.circle",
+                    title: "Sallama hassasiyeti",
+                    subtitle: "Bu ayar sadece senin cihazın için geçerli",
+                    color: .blue
+                )
             }
         }
     }
@@ -183,7 +221,7 @@ struct SettingsView: View {
     private var experienceSettingsSection: some View {
         SettingsSection(
             title: "✨ Deneyim Ayarları",
-            delay: 0.7,
+            delay: multipeerManager.isHost ? 0.8 : 0.7,
             isAnimated: animateContent
         ) {
             VStack(spacing: 16) {
@@ -225,7 +263,7 @@ struct SettingsView: View {
     private var aboutSection: some View {
         SettingsSection(
             title: "ℹ️ Hakkında",
-            delay: 0.8,
+            delay: multipeerManager.isHost ? 0.9 : 0.8,
             isAnimated: animateContent
         ) {
             VStack(spacing: 16) {
@@ -241,7 +279,7 @@ struct SettingsView: View {
                 SettingRow(
                     icon: "heart",
                     title: "Geliştirici",
-                    subtitle: "Made with ❤️"
+                    subtitle: "Berk Akbay - Made with ❤️"
                 ) {
                     EmptyView()
                 }
@@ -253,8 +291,7 @@ struct SettingsView: View {
                 ) {
                     Button(action: {
                         // TODO: App Store rating
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
+                        multipeerManager.playHaptic(style: .light)
                     }) {
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -273,6 +310,91 @@ struct SettingsView: View {
         case 2.0...2.5: return "Yüksek"
         default: return "Çok Yüksek"
         }
+    }
+}
+
+// MARK: - Connection Type Button
+struct ConnectionTypeButton: View {
+    let type: ConnectionType
+    let isSelected: Bool
+    let multipeerManager: MultipeerManager
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            multipeerManager.playHaptic(style: .light)
+            action()
+        }) {
+            VStack(spacing: 8) {
+                Image(systemName: type.icon)
+                    .font(.title2)
+                    .foregroundColor(isSelected ? .white : .blue)
+                
+                Text(typeShortName)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .white : .blue)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.blue : Color.white)
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            )
+        }
+        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+    
+    private var typeShortName: String {
+        switch type {
+        case .wifiOnly: return "Sadece\nWi-Fi"
+        case .bluetoothOnly: return "Sadece\nBluetooth"
+        case .both: return "Wi-Fi +\nBluetooth"
+        }
+    }
+}
+
+// MARK: - Info Row Component
+struct InfoRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(color)
+                .frame(width: 24, height: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 }
 

@@ -10,7 +10,12 @@ class MultipeerManager: NSObject, ObservableObject {
     
     // MARK: - Published Properties
     /// Oyunun merkezi durumu - UI değişiklikleri için reaktif
-    @Published var gameState = GameState()
+    @Published var gameState = GameState() {
+        didSet {
+            // GameState değiştiğinde motion detection'ı kontrol et
+            handleGameStateChange(from: oldValue, to: gameState)
+        }
+    }
     
     /// Bağlantı kopması bildirimi için
     @Published var connectionAlert: ConnectionAlert?
@@ -432,10 +437,10 @@ class MultipeerManager: NSObject, ObservableObject {
             
             // Debug output için message türünü kontrol et
             switch message {
-            case .vote(let mode):
-                print("📤 Oy gönderildi: \(mode.rawValue)")
-            case .choice(let selection):
-                print("📤 Seçim gönderildi: \(selection.rawValue)")
+            case .vote(let deviceID, let mode):
+                print("📤 Oy gönderildi: \(mode.rawValue) (DeviceID: \(deviceID))")
+            case .choice(let deviceID, let selection):
+                print("📤 Seçim gönderildi: \(selection.rawValue) (DeviceID: \(deviceID))")
             case .playerJoined(let player):
                 print("📤 Oyuncu katıldı mesajı: \(player.displayName)")
             case .playerLeft(let deviceID):
@@ -514,7 +519,7 @@ class MultipeerManager: NSObject, ObservableObject {
         send(message: message)
     }
     
-    /// Oy verme fonksiyonu
+    /// Oy verme fonksiyonu - GÜNCELLENDİ
     func castVote(mode: GameMode) {
         let currentDeviceID = userProfile.deviceID
         
@@ -525,7 +530,7 @@ class MultipeerManager: NSObject, ObservableObject {
             return
         }
         
-        print("🗳️ \(userProfile.nickname) oyunu: \(mode.rawValue)")
+        print("🗳️ \(userProfile.nickname) oyunu: \(mode.rawValue) (DeviceID: \(currentDeviceID))")
         
         // Başarılı oy haptic feedback
         playHaptic(style: .success)
@@ -533,8 +538,8 @@ class MultipeerManager: NSObject, ObservableObject {
         // Kendi oyunu yerel olarak ekle
         gameState.votes[currentDeviceID] = mode
         
-        // Ağ üzerinden diğer cihazlara gönder
-        let voteMessage = NetworkMessage.vote(mode: mode)
+        // Ağ üzerinden diğer cihazlara gönder - DeviceID eklendi
+        let voteMessage = NetworkMessage.vote(deviceID: currentDeviceID, mode: mode)
         send(message: voteMessage)
         
         // Oylama tamamlandı mı kontrol et
@@ -613,14 +618,9 @@ class MultipeerManager: NSObject, ObservableObject {
         
         // Game state'i senkronize et
         syncGameState()
-        
-        // Eğer sallama modu aktifse, hareket algılamayı başlat
-        if gameState.gameMode == .sallama {
-            startMotionDetection()
-        }
     }
     
-    /// Seçim yapma fonksiyonu
+    /// Seçim yapma fonksiyonu - GÜNCELLENDİ
     func makeChoice(choice: Choice) {
         let currentDeviceID = userProfile.deviceID
         
@@ -638,7 +638,7 @@ class MultipeerManager: NSObject, ObservableObject {
             return
         }
         
-        print("✂️ \(userProfile.nickname) seçimi: \(choice.rawValue)")
+        print("✂️ \(userProfile.nickname) seçimi: \(choice.rawValue) (DeviceID: \(currentDeviceID))")
         
         // Başarılı seçim haptic feedback
         playHaptic(style: .success)
@@ -646,8 +646,8 @@ class MultipeerManager: NSObject, ObservableObject {
         // Kendi seçimini yerel olarak ekle
         gameState.choices[currentDeviceID] = choice
         
-        // Ağ üzerinden diğer cihazlara gönder
-        let choiceMessage = NetworkMessage.choice(selection: choice)
+        // Ağ üzerinden diğer cihazlara gönder - DeviceID eklendi
+        let choiceMessage = NetworkMessage.choice(deviceID: currentDeviceID, selection: choice)
         send(message: choiceMessage)
         
         // Tur tamamlandı mı kontrol et (sadece host)
@@ -666,9 +666,6 @@ class MultipeerManager: NSObject, ObservableObject {
         }
         
         print("✅ Tur tamamlandı - Sonuçlar hesaplanıyor")
-        
-        // Hareket algılamayı durdur (pil tasarrufu için)
-        stopMotionDetection()
         
         // Tur sonuçlarını işle ve elemeleri hesapla
         processRoundResults()
@@ -939,6 +936,25 @@ class MultipeerManager: NSObject, ObservableObject {
     }
     
     // MARK: - Helper Methods
+    /// GameState değişikliklerini izler ve motion detection'ı yönetir
+    private func handleGameStateChange(from oldState: GameState, to newState: GameState) {
+        // Sadece tur oynama aşamasında ve sallama modunda motion detection aktif olmalı
+        let shouldHaveMotionDetection = (newState.gamePhase == .turOynaniyor && newState.gameMode == .sallama)
+        let currentlyHasMotionDetection = motionManager.isAccelerometerActive
+        
+        // Motion detection başlatılmalı
+        if shouldHaveMotionDetection && !currentlyHasMotionDetection {
+            print("🎯 Motion detection başlatılıyor (GameState değişikliği)")
+            startMotionDetection()
+        }
+        
+        // Motion detection durdurulmalı
+        if !shouldHaveMotionDetection && currentlyHasMotionDetection {
+            print("🛑 Motion detection durduruluyor (GameState değişikliği)")
+            stopMotionDetection()
+        }
+    }
+    
     /// PeerID'den Player nesnesi bulur
     private func findPlayer(by peerID: MCPeerID) -> Player? {
         return gameState.players.first { $0.deviceID == peerID.displayName }
@@ -1054,7 +1070,7 @@ extension MultipeerManager: MCSessionDelegate {
         }
     }
     
-    /// Alınan mesajı işler - GELİŞTİRİLMİŞ VERSİYON
+    /// Alınan mesajı işler - GÜNCELLENDİ
     private func handleReceivedMessage(_ message: NetworkMessage, from peerID: MCPeerID) {
         switch message {
         case .playerJoined(let player):
@@ -1143,9 +1159,8 @@ extension MultipeerManager: MCSessionDelegate {
                 send(message: response)
             }
             
-        case .vote(let mode):
-            print("🗳️ Oy alındı: \(mode.rawValue)")
-            let deviceID = peerID.displayName
+        case .vote(let deviceID, let mode):
+            print("🗳️ Oy alındı: \(mode.rawValue) (DeviceID: \(deviceID))")
             
             guard gameState.votes[deviceID] == nil else {
                 print("⚠️ \(deviceID) zaten oy vermiş")
@@ -1159,9 +1174,8 @@ extension MultipeerManager: MCSessionDelegate {
                 checkVotingCompletion()
             }
             
-        case .choice(let selection):
-            print("✂️ Seçim alındı: \(selection.rawValue)")
-            let deviceID = peerID.displayName
+        case .choice(let deviceID, let selection):
+            print("✂️ Seçim alındı: \(selection.rawValue) (DeviceID: \(deviceID))")
             
             guard gameState.choices[deviceID] == nil else {
                 print("⚠️ \(deviceID) zaten seçim yapmış")

@@ -4,8 +4,8 @@ import Foundation
 /// Cihazlar arasında gönderilecek mesajları tanımlayan ana enum
 /// MultipeerConnectivity framework'ü ile Data formatına çevrilerek gönderilir
 enum NetworkMessage: Codable {
-    case vote(mode: GameMode) // Bir oyuncunun oyun modu için oyunu
-    case choice(selection: Choice) // Bir oyuncunun tur içindeki seçimi
+    case vote(deviceID: String, mode: GameMode) // Bir oyuncunun oyun modu için oyunu - deviceID eklendi
+    case choice(deviceID: String, selection: Choice) // Bir oyuncunun tur içindeki seçimi - deviceID eklendi
     case playerJoined(player: Player) // Yeni oyuncu katıldı
     case playerLeft(deviceID: String) // Oyuncu ayrıldı
     case roomCreated(room: GameRoom) // Oda oluşturuldu

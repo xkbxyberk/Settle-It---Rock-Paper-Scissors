@@ -36,6 +36,13 @@ class MultipeerManager: NSObject, ObservableObject {
         return gameState.hostDeviceID == userProfile.deviceID
     }
     
+    // MARK: - Room Search Properties (YENİ)
+    /// Oda arama için timer ve deneme sayacı
+    private var roomSearchTimer: Timer?
+    private var roomSearchAttempts = 0
+    private var maxSearchAttempts = 15 // 30 saniye (2 saniyede bir)
+    private var searchingRoomCode: String?
+    
     // MARK: - MultipeerConnectivity Properties
     /// Bu cihazın benzersiz kimliği
     private let peerID: MCPeerID
@@ -156,35 +163,83 @@ class MultipeerManager: NSObject, ObservableObject {
         print("🏠 Oda oluşturuldu: \(name) (Kod: \(room.roomCode), Host: \(userProfile.nickname))")
     }
     
-    /// Oda kodunu kullanarak odaya katılmaya çalışır
+    /// Oda kodunu kullanarak odaya katılmaya çalışır - GELİŞTİRİLMİŞ VERSİYON
     func joinRoom(withCode code: String) {
         print("🔑 Oda kodu ile katılma isteği: \(code)")
         
-        // Servisleri başlat (oda arama için)
+        // Önceki arama varsa durdur
+        stopRoomSearch()
+        
+        // Arama parametrelerini ayarla
+        searchingRoomCode = code
+        roomSearchAttempts = 0
+        
+        // Servisleri başlat
         if settings.autoConnect {
             startAdvertising()
             startBrowsing()
         }
         
-        // Tüm bağlı cihazlara oda kodu gönder
-        let message = NetworkMessage.roomCodeRequest(code: code)
-        send(message: message)
+        // İlk denemeyi hemen yap
+        attemptRoomCodeRequest()
         
-        // Eğer hiç bağlı cihaz yoksa hata göster
-        if session.connectedPeers.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                if self.gameState.currentRoom == nil {
-                    self.connectionAlert = ConnectionAlert(
-                        title: "Oda Bulunamadı",
-                        message: "Bu koda sahip oda bulunamadı. Kodun doğru olduğundan emin ol."
-                    )
-                }
+        // Periyodik deneme timer'ını başlat (2 saniyede bir)
+        roomSearchTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            self.attemptRoomCodeRequest()
+        }
+        
+        // Maksimum süre sonunda arama iptal et (30 saniye)
+        DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval(maxSearchAttempts * 2)) {
+            if self.gameState.currentRoom == nil && self.searchingRoomCode == code {
+                self.stopRoomSearch()
+                self.connectionAlert = ConnectionAlert(
+                    title: "Oda Bulunamadı",
+                    message: "Bu koda sahip oda bulunamadı. Kodun doğru olduğundan ve cihazların yakın olduğundan emin ol."
+                )
             }
         }
     }
     
+    /// Oda kodu isteği gönderme denemesi - YENİ FONKSİYON
+    private func attemptRoomCodeRequest() {
+        guard let code = searchingRoomCode else { return }
+        
+        roomSearchAttempts += 1
+        print("🔍 Oda arama denemesi \(roomSearchAttempts)/\(maxSearchAttempts) - Kod: \(code)")
+        
+        // Bağlı cihaz varsa mesaj gönder
+        if !session.connectedPeers.isEmpty {
+            let message = NetworkMessage.roomCodeRequest(code: code)
+            send(message: message)
+            print("📤 Oda kodu isteği gönderildi (\(session.connectedPeers.count) cihaza)")
+        } else {
+            print("⚠️ Henüz bağlı cihaz yok, bekleniyor...")
+        }
+        
+        // Maksimum deneme aşılırsa durdur
+        if roomSearchAttempts >= maxSearchAttempts {
+            stopRoomSearch()
+            connectionAlert = ConnectionAlert(
+                title: "Bağlantı Sorunu",
+                message: "Yakında başka cihaz bulunamadı. Wi-Fi ve Bluetooth'un açık olduğundan emin ol."
+            )
+        }
+    }
+    
+    /// Oda arama işlemini durdur - YENİ FONKSİYON
+    private func stopRoomSearch() {
+        roomSearchTimer?.invalidate()
+        roomSearchTimer = nil
+        searchingRoomCode = nil
+        roomSearchAttempts = 0
+        print("🛑 Oda arama durduruldu")
+    }
+    
     /// Odaya katılır
     func joinRoom(_ room: GameRoom) {
+        // Aramayı durdur - oda bulundu!
+        stopRoomSearch()
+        
         gameState.currentRoom = room
         gameState.hostDeviceID = room.hostDeviceID
         
@@ -356,6 +411,7 @@ class MultipeerManager: NSObject, ObservableObject {
         serviceBrowser.stopBrowsingForPeers()
         session.disconnect()
         stopMotionDetection() // Hareket algılamayı da durdur
+        stopRoomSearch() // Oda aramayı da durdur - YENİ
         print("⏹️ Tüm servisler durduruldu")
     }
     
@@ -711,6 +767,9 @@ class MultipeerManager: NSObject, ObservableObject {
         // Hareket algılamayı durdur
         stopMotionDetection()
         
+        // Oda aramayı durdur
+        stopRoomSearch()
+        
         // Tüm servisleri durdur
         serviceAdvertiser.stopAdvertisingPeer()
         serviceBrowser.stopBrowsingForPeers()
@@ -906,12 +965,19 @@ class MultipeerManager: NSObject, ObservableObject {
 // MARK: - MCSessionDelegate
 extension MultipeerManager: MCSessionDelegate {
     
-    /// Peer bağlantı durumu değiştiğinde çağrılır
+    /// Peer bağlantı durumu değiştiğinde çağrılır - GELİŞTİRİLMİŞ VERSİYON
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         DispatchQueue.main.async {
             switch state {
             case .connected:
                 print("✅ Cihaz bağlandı: \(peerID.displayName)")
+                
+                // Eğer oda arıyorsak hemen deneme yap - YENİ
+                if let searchCode = self.searchingRoomCode {
+                    print("🔄 Yeni bağlantıda oda kodu deneniyor: \(searchCode)")
+                    let message = NetworkMessage.roomCodeRequest(code: searchCode)
+                    self.send(message: message)
+                }
                 
                 // Eğer host ise, mevcut oyun durumunu yeni oyuncuya gönder
                 if self.isHost && self.gameState.currentRoom != nil {
@@ -988,7 +1054,7 @@ extension MultipeerManager: MCSessionDelegate {
         }
     }
     
-    /// Alınan mesajı işler
+    /// Alınan mesajı işler - GELİŞTİRİLMİŞ VERSİYON
     private func handleReceivedMessage(_ message: NetworkMessage, from peerID: MCPeerID) {
         switch message {
         case .playerJoined(let player):
@@ -1052,7 +1118,10 @@ extension MultipeerManager: MCSessionDelegate {
             print("🔍 Oda kodu yanıtı: \(success)")
             
             if success, let foundRoom = room {
-                // Oda bulundu, katıl
+                // Oda bulundu! Aramayı durdur - GELİŞTİRİLMİŞ
+                stopRoomSearch()
+                
+                // Oda katıl
                 joinRoom(foundRoom)
                 
                 // Başarılı katılım haptic feedback
@@ -1062,14 +1131,8 @@ extension MultipeerManager: MCSessionDelegate {
                 let currentPlayer = getCurrentPlayer()
                 let joinMessage = NetworkMessage.playerJoined(player: currentPlayer)
                 send(message: joinMessage)
-            } else {
-                // Oda bulunamadı
-                playHaptic(style: .error)
-                connectionAlert = ConnectionAlert(
-                    title: "Oda Bulunamadı",
-                    message: "Bu koda sahip oda bulunamadı. Kodun doğru olduğundan emin ol."
-                )
             }
+            // Başarısız ise devam et - timer otomatik deneyecek
             
         case .requestRoomInfo:
             print("📋 Oda bilgisi istendi")

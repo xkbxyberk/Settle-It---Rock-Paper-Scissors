@@ -15,6 +15,16 @@ struct ContentView: View {
     /// Kullanıcı profili
     @State private var userProfile = UserProfile.load()
     
+    // MARK: - Animation States
+    @State private var menuAnimationOffset: CGFloat = 0
+    @State private var gameAnimationOffset: CGFloat = 0
+    @State private var menuScale: CGFloat = 1.0
+    @State private var gameScale: CGFloat = 1.0
+    @State private var menuRotation: Double = 0
+    @State private var gameRotation: Double = 0
+    @State private var toolbarOpacity: Double = 0
+    @State private var toolbarScale: CGFloat = 0.8
+    
     // MARK: - Body
     var body: some View {
         ZStack {
@@ -34,11 +44,14 @@ struct ContentView: View {
                     userProfile: $userProfile
                 )
                 .environmentObject(multipeerManager)
-                .transition(
-                    multipeerManager.settings.animations ?
-                        .opacity.combined(with: .scale(scale: 0.95)) :
-                        .identity
+                .offset(y: menuAnimationOffset)
+                .scaleEffect(menuScale)
+                .rotation3DEffect(
+                    .degrees(menuRotation),
+                    axis: (x: 1, y: 0, z: 0),
+                    perspective: 0.8
                 )
+                .opacity(showMenu ? 1.0 : 0.0)
                 
             } else {
                 // Oyun ekranları
@@ -54,33 +67,43 @@ struct ContentView: View {
                         
                         // Ana içerik - oyun aşamasına göre değişir
                         gamePhaseView
+                            .offset(y: gameAnimationOffset)
+                            .scaleEffect(gameScale)
+                            .rotation3DEffect(
+                                .degrees(gameRotation),
+                                axis: (x: 1, y: 0, z: 0),
+                                perspective: 0.8
+                            )
                     }
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
                             Button("Ana Menü") {
-                                let animationDuration = multipeerManager.settings.animations ? 0.3 : 0.1
-                                withAnimation(.easeInOut(duration: animationDuration)) {
-                                    // Oyunu sıfırla ve ana menüye dön
-                                    multipeerManager.resetGame()
-                                    showMenu = true
-                                }
+                                returnToMainMenu()
                             }
                             .foregroundColor(.white)
                             .fontWeight(.semibold)
+                            .opacity(toolbarOpacity)
+                            .scaleEffect(toolbarScale)
+                            .animation(
+                                .spring(response: 0.6, dampingFraction: 0.8).delay(0.2),
+                                value: toolbarOpacity
+                            )
                         }
                         
                         ToolbarItem(placement: .navigationBarTrailing) {
                             // Game phase indicator
                             gamePhaseIndicator
+                                .opacity(toolbarOpacity)
+                                .scaleEffect(toolbarScale)
+                                .animation(
+                                    .spring(response: 0.6, dampingFraction: 0.8).delay(0.3),
+                                    value: toolbarOpacity
+                                )
                         }
                     }
                 }
                 .environmentObject(multipeerManager)
-                .transition(
-                    multipeerManager.settings.animations ?
-                        .opacity.combined(with: .scale(scale: 0.95)) :
-                        .identity
-                )
+                .opacity(showMenu ? 0.0 : 1.0)
                 .alert(item: $multipeerManager.connectionAlert) { (alert: ConnectionAlert) in
                     Alert(
                         title: Text(alert.title),
@@ -90,12 +113,6 @@ struct ContentView: View {
                 }
             }
         }
-        .animation(
-            multipeerManager.settings.animations ?
-                .easeInOut(duration: 0.3) :
-                .none,
-            value: showMenu
-        )
         .sheet(isPresented: $showProfileSetup) {
             ProfileSetupView(userProfile: $userProfile)
                 .environmentObject(multipeerManager)
@@ -103,10 +120,14 @@ struct ContentView: View {
         .onAppear {
             // Kullanıcı profili yüklendikten sonra multipeerManager'a aktar
             multipeerManager.updateUserProfile(userProfile)
+            setupInitialAnimationStates()
         }
         .onChange(of: userProfile) { _, newProfile in
             // Profil değiştiğinde multipeerManager'ı güncelle
             multipeerManager.updateUserProfile(newProfile)
+        }
+        .onChange(of: showMenu) { _, isShowingMenu in
+            handleMenuTransition(isShowingMenu: isShowingMenu)
         }
     }
     
@@ -156,6 +177,115 @@ struct ContentView: View {
                         .stroke(Color.white.opacity(0.3), lineWidth: 1)
                 )
         )
+    }
+    
+    // MARK: - Animation Methods
+    private func setupInitialAnimationStates() {
+        if showMenu {
+            // Ana menü başlangıç durumu
+            menuAnimationOffset = 0
+            menuScale = 1.0
+            menuRotation = 0
+            toolbarOpacity = 0
+            toolbarScale = 0.8
+            
+            // Oyun ekranını sağda gizli konumda hazırla
+            gameAnimationOffset = UIScreen.main.bounds.width
+            gameScale = 0.9
+            gameRotation = 5
+        } else {
+            // Oyun ekranı açık durumu
+            gameAnimationOffset = 0
+            gameScale = 1.0
+            gameRotation = 0
+            toolbarOpacity = 1.0
+            toolbarScale = 1.0
+            
+            // Ana menüyü solda gizli konumda hazırla
+            menuAnimationOffset = -UIScreen.main.bounds.width
+            menuScale = 0.95
+            menuRotation = 0
+        }
+    }
+    
+    private func handleMenuTransition(isShowingMenu: Bool) {
+        let shouldAnimate = multipeerManager.settings.animations
+        let animationDuration: Double = shouldAnimate ? 0.8 : 0.1
+        let springResponse: Double = shouldAnimate ? 0.7 : 0.2
+        let springDamping: Double = shouldAnimate ? 0.8 : 1.0
+        
+        if isShowingMenu {
+            // Ana menüye dönüş animasyonu
+            animateToMenu(duration: animationDuration, response: springResponse, damping: springDamping)
+        } else {
+            // Oyun ekranına geçiş animasyonu
+            animateToGame(duration: animationDuration, response: springResponse, damping: springDamping)
+        }
+    }
+    
+    private func animateToGame(duration: Double, response: Double, damping: Double) {
+        // Haptic feedback
+        multipeerManager.playHaptic(style: .heavy)
+        
+        // Ana menü çıkış animasyonu (yukarıya doğru slide + scale down + rotate)
+        withAnimation(.spring(response: response, dampingFraction: damping)) {
+            menuAnimationOffset = -150
+            menuScale = 0.7
+            menuRotation = 20
+        }
+        
+        // Oyun ekranını sağdan merkeze getir (aşağıdan yukarı yerine)
+        gameAnimationOffset = UIScreen.main.bounds.width
+        gameScale = 0.9
+        gameRotation = 5
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + (duration * 0.2)) {
+            withAnimation(.spring(response: response, dampingFraction: damping).delay(0.1)) {
+                gameAnimationOffset = 0
+                gameScale = 1.0
+                gameRotation = 0
+            }
+            
+            // Toolbar elementlerini sırayla göster
+            withAnimation(.spring(response: response, dampingFraction: damping).delay(0.3)) {
+                toolbarOpacity = 1.0
+                toolbarScale = 1.0
+            }
+        }
+    }
+    
+    private func animateToMenu(duration: Double, response: Double, damping: Double) {
+        // Haptic feedback
+        multipeerManager.playHaptic(style: .medium)
+        
+        // Toolbar elementlerini hızlıca gizle
+        withAnimation(.easeOut(duration: 0.2)) {
+            toolbarOpacity = 0
+            toolbarScale = 0.9
+        }
+        
+        // Ana menüyü hemen hazır konuma getir (soldan gelecek gibi)
+        menuAnimationOffset = -UIScreen.main.bounds.width
+        menuScale = 0.95
+        menuRotation = 0
+        
+        // Oyun ekranı sağa doğru slide out + ana menü soldan slide in (eşzamanlı)
+        withAnimation(.spring(response: response * 0.8, dampingFraction: damping + 0.1)) {
+            // Oyun ekranı sağa kaydır
+            gameAnimationOffset = UIScreen.main.bounds.width
+            gameScale = 0.9
+            gameRotation = 5
+            
+            // Ana menü soldan merkeze gel
+            menuAnimationOffset = 0
+            menuScale = 1.0
+            menuRotation = 0
+        }
+    }
+    
+    private func returnToMainMenu() {
+        multipeerManager.resetGame()
+        showMenu = true
     }
     
     // MARK: - Helper Methods

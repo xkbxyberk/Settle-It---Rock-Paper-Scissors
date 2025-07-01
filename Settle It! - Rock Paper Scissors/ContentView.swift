@@ -130,14 +130,26 @@ struct ContentView: View {
         .onChange(of: showMenu) { _, isShowingMenu in
             handleMenuTransition(isShowingMenu: isShowingMenu)
         }
-        // YENİ: GameState değişikliklerini izle ve otomatik olarak ana menüye dön
+        // GameState değişikliklerini izle ve otomatik olarak ana menüye dön
         .onChange(of: multipeerManager.gameState) { _, newGameState in
             // Eğer GameState tamamen temizlenmişse (resetToMainMenu çağrıldıysa) ana menüye dön
             if newGameState.currentRoom == nil &&
                newGameState.players.isEmpty &&
                !showMenu {
                 print("🔄 GameState temizlendi - Ana menüye dönülüyor")
-                showMenu = true
+                DispatchQueue.main.async {
+                    showMenu = true
+                }
+            }
+        }
+        // MultipeerManager'dan ana menü isteği dinle
+        .onChange(of: multipeerManager.shouldReturnToMainMenu) { _, shouldReturn in
+            if shouldReturn && !showMenu {
+                print("🔄 Ana menü isteği alındı - Ana menüye dönülüyor")
+                DispatchQueue.main.async {
+                    showMenu = true
+                    multipeerManager.shouldReturnToMainMenu = false // Reset flag
+                }
             }
         }
     }
@@ -148,7 +160,7 @@ struct ContentView: View {
     private var gamePhaseView: some View {
         switch multipeerManager.gameState.gamePhase {
         case .lobi:
-            LobbyView()
+            LobbyView(returnToMainMenu: returnToMainMenu) // Closure geç
             
         case .oylama:
             VotingView()
@@ -294,10 +306,17 @@ struct ContentView: View {
         }
     }
     
+    // Ana menüye dönüş fonksiyonu - güncellendi
     private func returnToMainMenu() {
-        // resetGame() multipeerManager'da resetToMainMenu()'u çağırır
-        // onChange(of: multipeerManager.gameState) GameState temizlendiğinde showMenu = true yapar
+        print("🔄 Ana menüye dönüş isteği - UI seviyesinde")
+        
+        // Önce MultipeerManager'ı temizle
         multipeerManager.resetGame()
+        
+        // Sonra UI'yi ana menüye çevir
+        DispatchQueue.main.async {
+            showMenu = true
+        }
     }
     
     // MARK: - Helper Methods

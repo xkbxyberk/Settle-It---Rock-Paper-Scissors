@@ -32,6 +32,9 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
     
+    /// Ana menüye dönüş flag'i - ContentView tarafından dinlenir
+    @Published var shouldReturnToMainMenu: Bool = false
+    
     // MARK: - Private Properties
     /// Kullanıcı profili
     private var userProfile = UserProfile.load()
@@ -41,7 +44,7 @@ class MultipeerManager: NSObject, ObservableObject {
         return gameState.hostDeviceID == userProfile.deviceID
     }
     
-    // MARK: - Room Search Properties (YENİ)
+    // MARK: - Room Search Properties
     /// Oda arama için timer ve deneme sayacı
     private var roomSearchTimer: Timer?
     private var roomSearchAttempts = 0
@@ -321,7 +324,7 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
     
-    /// Ana menüye güvenli dönüş
+    /// Ana menüye güvenli dönüş - GÜNCELLENDİ
     private func resetToMainMenu() {
         print("🔄 Ana menüye dönülüyor...")
         
@@ -333,6 +336,9 @@ class MultipeerManager: NSObject, ObservableObject {
         
         // Alert'i temizle
         connectionAlert = nil
+        
+        // Ana menü flag'ini set et
+        shouldReturnToMainMenu = true
         
         print("✅ Ana menüye dönüldü")
     }
@@ -699,7 +705,7 @@ class MultipeerManager: NSObject, ObservableObject {
         serviceBrowser.stopBrowsingForPeers()
         session.disconnect()
         stopMotionDetection() // Hareket algılamayı da durdur
-        stopRoomSearch() // Oda aramayı da durdur - YENİ
+        stopRoomSearch() // Oda aramayı da durdur
         print("⏹️ Tüm servisler durduruldu")
     }
     
@@ -1408,7 +1414,7 @@ extension MultipeerManager: MCSessionDelegate {
             case .connected:
                 print("✅ Cihaz bağlandı: \(peerID.displayName)")
                 
-                // Eğer oda arıyorsak hemen deneme yap - YENİ
+                // Eğer oda arıyorsak hemen deneme yap
                 if let searchCode = self.searchingRoomCode {
                     print("🔄 Yeni bağlantıda oda kodu deneniyor: \(searchCode)")
                     let message = NetworkMessage.roomCodeRequest(code: searchCode)
@@ -1579,7 +1585,7 @@ extension MultipeerManager: MCSessionDelegate {
             print("🔍 Oda kodu yanıtı: \(success)")
             
             if success, let foundRoom = room {
-                // Oda bulundu! Aramayı durdur - GELİŞTİRİLMİŞ
+                // Oda bulundu! Aramayı durdur
                 stopRoomSearch()
                 
                 // Oda katıl

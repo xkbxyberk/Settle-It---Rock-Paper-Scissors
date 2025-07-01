@@ -7,6 +7,9 @@ struct LobbyView: View {
     /// MultipeerManager'dan geçirilen environment object
     @EnvironmentObject var multipeerManager: MultipeerManager
     
+    /// Ana menüye dönüş closure'ı
+    let returnToMainMenu: () -> Void
+    
     @State private var showCreateRoom = false
     @State private var showJoinRoom = false
     @State private var newRoomName = ""
@@ -492,7 +495,7 @@ struct PlayerRowView: View {
 
 // MARK: - Preview
 #Preview {
-    LobbyView()
+    LobbyView(returnToMainMenu: {})
         .environmentObject(MultipeerManager())
         .background(
             LinearGradient(

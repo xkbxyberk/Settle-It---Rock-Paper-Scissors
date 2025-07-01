@@ -74,11 +74,16 @@ struct GameState: Codable, Equatable {
     // Oda bilgileri
     var currentRoom: GameRoom? // Mevcut oda
     var hostDeviceID: String? // Host'un cihaz ID'si
+    var hostSuccession: [String] = [] // Host değişim sırası (deviceID listesi) - YENİ
     
     // Tur bazlı veriler
     var currentRound: Int = 0
     var votes: [String: GameMode] = [:] // Kimin hangi moda oy verdiği (Player.deviceID: GameMode)
     var choices: [String: Choice] = [:] // Kimin hangi seçimi yaptığı (Player.deviceID: Choice)
+    
+    // Tekrar oyna sistemi - YENİ
+    var playAgainRequests: [String: Bool] = [:] // DeviceID: Response (true/false)
+    var isWaitingForPlayAgainResponses: Bool = false
 }
 
 // MARK: - Game Phase

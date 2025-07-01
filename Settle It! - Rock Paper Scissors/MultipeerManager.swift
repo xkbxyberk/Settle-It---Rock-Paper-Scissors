@@ -156,6 +156,9 @@ class MultipeerManager: NSObject, ObservableObject {
         gameState.players = [currentPlayer]
         gameState.activePlayers = [currentPlayer]
         
+        // Host succession listesini başlat (kendimiz ilk sırada)
+        gameState.hostSuccession = [userProfile.deviceID]
+        
         // Başarılı oda oluşturma haptic feedback
         playHaptic(style: .success)
         
@@ -255,10 +258,290 @@ class MultipeerManager: NSObject, ObservableObject {
             gameState.activePlayers.append(currentPlayer)
         }
         
+        // Host succession listesine kendimizi ekle (eğer yoksa)
+        if !gameState.hostSuccession.contains(userProfile.deviceID) {
+            gameState.hostSuccession.append(userProfile.deviceID)
+        }
+        
         // Odaya katılım haptic feedback
         playHaptic(style: .success)
         
         print("🚪 Odaya katıldı: \(room.roomName) (Kod: \(room.roomCode))")
+    }
+    
+    // MARK: - Room Management - YENİ FONKSİYONLAR
+    
+    /// Odadan ayrılır
+    func leaveRoom() {
+        guard gameState.currentRoom != nil else { return }
+        
+        let currentDeviceID = userProfile.deviceID
+        
+        print("🚪 Odadan ayrılıyor: \(userProfile.nickname)")
+        
+        if isHost {
+            // Host ayrılıyorsa - Host transferi yap
+            handleHostLeaving()
+        } else {
+            // Normal oyuncu ayrılıyorsa
+            let message = NetworkMessage.leaveRoom(deviceID: currentDeviceID)
+            send(message: message)
+        }
+        
+        // Kendi durumunu temizle
+        resetToMainMenu()
+    }
+    
+    /// Host ayrıldığında yeni host seçer ve transferi yapar
+    private func handleHostLeaving() {
+        // Sıradaki host'u bul (kendimiz hariç)
+        let remainingSuccession = gameState.hostSuccession.filter { deviceID in
+            deviceID != userProfile.deviceID && gameState.players.contains { $0.deviceID == deviceID }
+        }
+        
+        if let newHostDeviceID = remainingSuccession.first {
+            // Yeni host var - transferi bildir
+            print("👑 Host transferi yapılıyor: \(newHostDeviceID)")
+            
+            gameState.hostDeviceID = newHostDeviceID
+            gameState.hostSuccession = remainingSuccession
+            
+            let transferMessage = NetworkMessage.hostChanged(newHostDeviceID: newHostDeviceID)
+            send(message: transferMessage)
+            
+            // Kendi ayrılışını da bildir
+            let leaveMessage = NetworkMessage.leaveRoom(deviceID: userProfile.deviceID)
+            send(message: leaveMessage)
+        } else {
+            // Başka oyuncu yok - oda kapanıyor
+            print("🏠 Oda kapanıyor - başka oyuncu yok")
+            
+            let leaveMessage = NetworkMessage.leaveRoom(deviceID: userProfile.deviceID)
+            send(message: leaveMessage)
+        }
+    }
+    
+    /// Ana menüye güvenli dönüş
+    private func resetToMainMenu() {
+        print("🔄 Ana menüye dönülüyor...")
+        
+        // Tüm servisleri durdur (hareket algılama ve oda arama dahil)
+        stopServices()
+        
+        // GameState'i tamamen sıfırla
+        gameState = GameState()
+        
+        // Alert'i temizle
+        connectionAlert = nil
+        
+        print("✅ Ana menüye dönüldü")
+    }
+    
+    /// Host değişikliğini işler
+    private func handleHostChange(newHostDeviceID: String) {
+        gameState.hostDeviceID = newHostDeviceID
+        
+        print("👑 Yeni host: \(newHostDeviceID)")
+        print("👑 Ben host'um: \(isHost)")
+        
+        if isHost {
+            // Yeni host olduysak ayarları gönder
+            sendHostSettings()
+            print("👑 Yeni host olarak ayarları gönderdim")
+        }
+        
+        // Host değişikliği haptic feedback
+        playHaptic(style: .medium)
+    }
+    
+    // MARK: - Play Again System - YENİ FONKSİYONLAR
+    
+    /// Tekrar oyna isteği başlatır (sadece host)
+    func requestPlayAgain() {
+        guard isHost else {
+            print("⚠️ Sadece host tekrar oyna isteği gönderebilir")
+            return
+        }
+        
+        guard gameState.gamePhase == .oyunBitti else {
+            print("⚠️ Tekrar oyna sadece oyun bittiğinde kullanılabilir")
+            return
+        }
+        
+        print("🔄 Tekrar oyna isteği başlatılıyor...")
+        
+        // Tekrar oyna sistemini başlat
+        gameState.isWaitingForPlayAgainResponses = true
+        gameState.playAgainRequests.removeAll()
+        
+        // Kendi onayımızı ekle
+        gameState.playAgainRequests[userProfile.deviceID] = true
+        
+        // Diğer oyunculara istek gönder
+        let message = NetworkMessage.playAgainRequest(deviceID: userProfile.deviceID)
+        send(message: message)
+        
+        // Game state'i senkronize et
+        syncGameState()
+        
+        print("📤 Tekrar oyna isteği gönderildi")
+    }
+    
+    /// Tekrar oyna isteğine yanıt verir
+    func respondToPlayAgain(accepted: Bool) {
+        guard gameState.isWaitingForPlayAgainResponses else {
+            print("⚠️ Aktif bir tekrar oyna isteği yok")
+            return
+        }
+        
+        let currentDeviceID = userProfile.deviceID
+        
+        print("🔄 Tekrar oyna yanıtı: \(accepted ? "Kabul" : "Ret")")
+        
+        // Kendi yanıtımızı kaydet
+        gameState.playAgainRequests[currentDeviceID] = accepted
+        
+        // Yanıtı diğer oyunculara gönder
+        let message = NetworkMessage.playAgainResponse(deviceID: currentDeviceID, accepted: accepted)
+        send(message: message)
+        
+        // Host isek tüm yanıtları kontrol et
+        if isHost {
+            checkPlayAgainCompletion()
+        }
+    }
+    
+    /// Tüm tekrar oyna yanıtlarının gelip gelmediğini kontrol eder (sadece host)
+    private func checkPlayAgainCompletion() {
+        guard isHost else { return }
+        
+        let totalPlayers = gameState.players.count
+        let responseCount = gameState.playAgainRequests.count
+        
+        print("🔄 Tekrar oyna yanıtları: \(responseCount)/\(totalPlayers)")
+        
+        // Tüm yanıtlar geldi mi?
+        guard responseCount == totalPlayers else { return }
+        
+        // Kabul eden ve reddeden oyuncuları ayır
+        let acceptingPlayers = gameState.players.filter { player in
+            gameState.playAgainRequests[player.deviceID] == true
+        }
+        
+        let rejectingPlayers = gameState.players.filter { player in
+            gameState.playAgainRequests[player.deviceID] == false
+        }
+        
+        print("✅ Kabul eden oyuncular (\(acceptingPlayers.count)): \(acceptingPlayers.map { $0.displayName }.joined(separator: ", "))")
+        print("❌ Reddeden oyuncular (\(rejectingPlayers.count)): \(rejectingPlayers.map { $0.displayName }.joined(separator: ", "))")
+        
+        if acceptingPlayers.count >= 2 {
+            // En az 2 oyuncu kabul etti - onlarla devam et
+            print("🎉 En az 2 oyuncu kabul etti - Reddedenleri çıkarıp yeni turnuva başlatılıyor")
+            
+            // Reddeden oyuncuları sistemden çıkar
+            removeRejectingPlayersAndStartTournament(
+                acceptingPlayers: acceptingPlayers,
+                rejectingPlayers: rejectingPlayers
+            )
+            
+        } else {
+            // 2'den az oyuncu kabul etti - herkesi ana menüye gönder
+            print("❌ Yetersiz oyuncu kabul etti (\(acceptingPlayers.count)) - Ana menüye dönülecek")
+            
+            // Tekrar oyna sistemini temizle
+            gameState.isWaitingForPlayAgainResponses = false
+            gameState.playAgainRequests.removeAll()
+            
+            // Ana menüye dönüş haptic feedback
+            playHaptic(style: .warning)
+            
+            // Game state'i senkronize et
+            syncGameState()
+            
+            // 3 saniye sonra ana menüye dön
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                self.resetToMainMenu()
+            }
+        }
+    }
+    
+    /// Reddeden oyuncuları çıkarır ve kabul edenlerle yeni turnuva başlatır
+    private func removeRejectingPlayersAndStartTournament(acceptingPlayers: [Player], rejectingPlayers: [Player]) {
+        // Reddeden oyuncuları bilgilendir (ana menüye döneceklerini)
+        for rejectingPlayer in rejectingPlayers {
+            let message = NetworkMessage.playerLeft(deviceID: rejectingPlayer.deviceID)
+            send(message: message)
+        }
+        
+        // Host succession'ı güncelle - sadece kabul edenler kalacak
+        let newHostSuccession = gameState.hostSuccession.filter { deviceID in
+            acceptingPlayers.contains { $0.deviceID == deviceID }
+        }
+        
+        // Eğer mevcut host reddettiyse yeni host seç
+        if !acceptingPlayers.contains(where: { $0.deviceID == gameState.hostDeviceID }) {
+            if let newHostDeviceID = newHostSuccession.first {
+                gameState.hostDeviceID = newHostDeviceID
+                print("👑 Host reddetti, yeni host: \(newHostDeviceID)")
+                
+                // Host değişikliğini bildir
+                let hostChangeMessage = NetworkMessage.hostChanged(newHostDeviceID: newHostDeviceID)
+                send(message: hostChangeMessage)
+            }
+        }
+        
+        // Oyuncu listelerini güncelle - sadece kabul edenler kalsın
+        gameState.players = acceptingPlayers
+        gameState.activePlayers = acceptingPlayers
+        gameState.hostSuccession = newHostSuccession
+        
+        // Aynı oyuncularla yeni turnuva başlat
+        restartTournamentWithAcceptingPlayers()
+    }
+    
+    /// Kabul eden oyuncularla yeni turnuva başlatır
+    private func restartTournamentWithAcceptingPlayers() {
+        print("🔄 Kabul eden oyuncularla yeni turnuva başlatılıyor...")
+        
+        // Tekrar oyna sistemini temizle
+        gameState.isWaitingForPlayAgainResponses = false
+        gameState.playAgainRequests.removeAll()
+        
+        // Oyun verilerini sıfırla ama oyuncuları koru
+        let currentPlayers = gameState.players
+        let currentRoom = gameState.currentRoom
+        let currentHostDeviceID = gameState.hostDeviceID
+        let currentHostSuccession = gameState.hostSuccession
+        
+        // GameState'i temizle
+        gameState = GameState()
+        
+        // Gerekli verileri geri yükle
+        gameState.players = currentPlayers
+        gameState.activePlayers = currentPlayers // Tüm oyuncular yeniden aktif
+        gameState.currentRoom = currentRoom
+        gameState.hostDeviceID = currentHostDeviceID
+        gameState.hostSuccession = currentHostSuccession
+        gameState.gamePhase = .lobi
+        
+        // Yeniden başlatma mesajını gönder
+        let message = NetworkMessage.restartTournament
+        send(message: message)
+        
+        // Game state'i senkronize et
+        syncGameState()
+        
+        // Başarılı yeniden başlatma haptic feedback
+        playHaptic(style: .success)
+        
+        print("✅ Yeni turnuva başlatıldı - Lobi aşamasına dönüldü (\(currentPlayers.count) oyuncu)")
+    }
+    
+    /// Aynı oyuncularla yeni turnuva başlatır (Eski fonksiyon - artık kullanılmıyor)
+    private func restartTournament() {
+        // Bu fonksiyon artık restartTournamentWithAcceptingPlayers() ile değiştirildi
+        restartTournamentWithAcceptingPlayers()
     }
     
     // MARK: - Settings Management
@@ -459,6 +742,16 @@ class MultipeerManager: NSObject, ObservableObject {
                 print("📤 Oda kodu yanıtı gönderildi: \(success)")
             case .requestRoomInfo:
                 print("📤 Oda bilgisi istendi")
+            case .leaveRoom(let deviceID):
+                print("📤 Oda ayrılma mesajı gönderildi: \(deviceID)")
+            case .hostChanged(let newHostDeviceID):
+                print("📤 Host değişikliği bildirimi gönderildi: \(newHostDeviceID)")
+            case .playAgainRequest(let deviceID):
+                print("📤 Tekrar oyna isteği gönderildi: \(deviceID)")
+            case .playAgainResponse(let deviceID, let accepted):
+                print("📤 Tekrar oyna yanıtı gönderildi: \(deviceID) - \(accepted)")
+            case .restartTournament:
+                print("📤 Turnuva yeniden başlatma komutu gönderildi")
             }
         } catch {
             print("❌ Mesaj gönderme hatası: \(error.localizedDescription)")
@@ -757,28 +1050,10 @@ class MultipeerManager: NSObject, ObservableObject {
         syncGameState()
     }
     
-    /// Oyunu sıfırlar ve ana menüye döner
+    /// Oyunu sıfırlar ve ana menüye döner (Public method)
     func resetGame() {
-        print("🔄 Oyun sıfırlanıyor ve ana menüye dönülüyor...")
-        
-        // Hareket algılamayı durdur
-        stopMotionDetection()
-        
-        // Oda aramayı durdur
-        stopRoomSearch()
-        
-        // Tüm servisleri durdur
-        serviceAdvertiser.stopAdvertisingPeer()
-        serviceBrowser.stopBrowsingForPeers()
-        session.disconnect()
-        
-        // GameState'i tamamen sıfırla
-        gameState = GameState()
-        
-        // Alert'i temizle
-        connectionAlert = nil
-        
-        print("✅ Oyun sıfırlandı - Ana menüye dönüldü")
+        print("🔄 Oyun sıfırlanıyor (Public resetGame çağrısı)")
+        resetToMainMenu()
     }
     
     /// Oyunu yeniden başlatır (ana menüden geri gelirken)
@@ -976,6 +1251,151 @@ class MultipeerManager: NSObject, ObservableObject {
         
         print("🚫 Oyuncu kaldırıldı: \(deviceID)")
     }
+    
+    // MARK: - Message Handlers - YENİ FONKSİYONLAR
+    
+    /// Host'un bağlantısının kopması durumunu işler
+    private func handleHostDisconnection(disconnectedDeviceID: String) {
+        print("👑 Host bağlantısı koptu, host transferi yapılıyor...")
+        
+        // Eski host'u sistemden kaldır
+        gameState.players.removeAll { $0.deviceID == disconnectedDeviceID }
+        gameState.activePlayers.removeAll { $0.deviceID == disconnectedDeviceID }
+        gameState.hostSuccession.removeAll { $0 == disconnectedDeviceID }
+        gameState.votes.removeValue(forKey: disconnectedDeviceID)
+        gameState.choices.removeValue(forKey: disconnectedDeviceID)
+        gameState.playAgainRequests.removeValue(forKey: disconnectedDeviceID)
+        
+        // Yeni host seç (succession listesindeki ilk kişi)
+        if let newHostDeviceID = gameState.hostSuccession.first {
+            gameState.hostDeviceID = newHostDeviceID
+            
+            print("👑 Yeni host belirlendi: \(newHostDeviceID)")
+            print("👑 Ben yeni host'um: \(isHost)")
+            
+            if isHost {
+                // Yeni host olduysak bilgilendir
+                print("👑 Yeni host olarak görevimi üstleniyorum")
+                
+                // Host değişikliğini diğerlerine bildir
+                let message = NetworkMessage.hostChanged(newHostDeviceID: newHostDeviceID)
+                send(message: message)
+                
+                // Game state'i senkronize et
+                syncGameState()
+                
+                // Host ayarlarını gönder
+                sendHostSettings()
+                
+                // Host transfer haptic feedback
+                playHaptic(style: .heavy)
+                
+                // Oyun durumunu kontrol et
+                handlePlayerDisconnection()
+            }
+        } else {
+            // Başka oyuncu yok - ana menüye dön
+            print("⚠️ Başka oyuncu kalmadı - Ana menüye dönülecek")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.resetToMainMenu()
+            }
+        }
+    }
+    
+    /// Oyuncu ayrılması mesajını işler
+    private func handlePlayerLeave(deviceID: String) {
+        // Eğer ayrılan oyuncu biziz ve tekrar oyna sürecindeyse ana menüye dön
+        if deviceID == userProfile.deviceID && gameState.isWaitingForPlayAgainResponses {
+            print("🚪 Tekrar oyna reddettiğimiz için ana menüye dönülüyor")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.resetToMainMenu()
+            }
+            return
+        }
+        
+        // Oyuncuyu kaldır
+        gameState.players.removeAll { $0.deviceID == deviceID }
+        gameState.activePlayers.removeAll { $0.deviceID == deviceID }
+        
+        // Host succession'dan kaldır
+        gameState.hostSuccession.removeAll { $0 == deviceID }
+        
+        // Votes ve choices'lardan kaldır
+        gameState.votes.removeValue(forKey: deviceID)
+        gameState.choices.removeValue(forKey: deviceID)
+        gameState.playAgainRequests.removeValue(forKey: deviceID)
+        
+        // Oyuncu ayrılma haptic feedback
+        playHaptic(style: .light)
+        
+        // Eğer çok az oyuncu kaldıysa ana menüye dön
+        if gameState.players.count < 2 {
+            print("⚠️ Yetersiz oyuncu kaldı - Ana menüye dönülüyor")
+            playHaptic(style: .warning)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.resetToMainMenu()
+            }
+        }
+        
+        // Host isek oyun durumunu kontrol et
+        if isHost {
+            handlePlayerDisconnection()
+        }
+    }
+    
+    /// Tekrar oyna isteği mesajını işler
+    private func handlePlayAgainRequest(from deviceID: String) {
+        guard gameState.gamePhase == .oyunBitti else { return }
+        
+        // İsteği kaydet
+        gameState.isWaitingForPlayAgainResponses = true
+        gameState.playAgainRequests[deviceID] = true // İstek gönderen otomatik olarak kabul ediyor
+        
+        // Tekrar oyna isteği haptic feedback
+        playHaptic(style: .medium)
+        
+        print("🔄 Tekrar oyna sistemi aktif edildi")
+    }
+    
+    /// Tekrar oyna yanıtı mesajını işler
+    private func handlePlayAgainResponse(from deviceID: String, accepted: Bool) {
+        guard gameState.isWaitingForPlayAgainResponses else { return }
+        
+        // Yanıtı kaydet
+        gameState.playAgainRequests[deviceID] = accepted
+        
+        print("📝 Tekrar oyna yanıtı kaydedildi: \(deviceID) = \(accepted)")
+        
+        // Host isek tamamlanma kontrolü yap
+        if isHost {
+            checkPlayAgainCompletion()
+        }
+    }
+    
+    /// Turnuva yeniden başlatma mesajını işler
+    private func handleTournamentRestart() {
+        // Tekrar oyna sistemini temizle
+        gameState.isWaitingForPlayAgainResponses = false
+        gameState.playAgainRequests.removeAll()
+        
+        // Tüm oyuncuları yeniden aktif yap
+        gameState.activePlayers = gameState.players
+        
+        // Oyun verilerini sıfırla
+        gameState.gamePhase = .lobi
+        gameState.gameMode = nil
+        gameState.currentRound = 0
+        gameState.votes.removeAll()
+        gameState.choices.removeAll()
+        
+        // Turnuva yeniden başlatma haptic feedback
+        playHaptic(style: .success)
+        
+        print("✅ Turnuva yeniden başlatıldı - Lobi aşamasına dönüldü")
+    }
 }
 
 // MARK: - MCSessionDelegate
@@ -1015,11 +1435,22 @@ extension MultipeerManager: MCSessionDelegate {
                     )
                 }
                 
-                // Oyuncuyu kaldır
-                self.removePlayer(by: peerID)
+                // Host'un bağlantısı mı koptu kontrol et
+                let disconnectedDeviceID = peerID.displayName
+                if self.gameState.hostDeviceID == disconnectedDeviceID {
+                    print("👑 Host'un bağlantısı koptu - Host transferi yapılıyor")
+                    self.handleHostDisconnection(disconnectedDeviceID: disconnectedDeviceID)
+                } else {
+                    // Normal oyuncu koptu
+                    self.handlePlayerLeave(deviceID: disconnectedDeviceID)
+                }
                 
-                // Oyunun kilitlenmesini önlemek için kontroller
-                self.handlePlayerDisconnection()
+                // Oyuncu kaldırma işlemi handlePlayerLeave veya handleHostDisconnection'da yapıldı
+                
+                // Oyunun kilitlenmesini önlemek için kontroller (sadece host ise)
+                if self.isHost {
+                    self.handlePlayerDisconnection()
+                }
                 
             case .connecting:
                 print("🔄 Bağlanıyor: \(peerID.displayName)")
@@ -1047,12 +1478,20 @@ extension MultipeerManager: MCSessionDelegate {
             checkRoundCompletion()
         }
         
+        // Eğer tekrar oyna aşamasındaysak ve tüm kalan oyuncular yanıt verdiyse
+        if gameState.isWaitingForPlayAgainResponses && gameState.playAgainRequests.count == gameState.players.count {
+            print("🔄 Oyuncu kopmasına rağmen tekrar oyna yanıtları tamamlandı")
+            checkPlayAgainCompletion()
+        }
+        
         // Eğer çok az oyuncu kaldıysa oyunu bitir
         if gameState.players.count < 2 {
-            print("⚠️ Yetersiz oyuncu kaldı - Oyun sonlandırılıyor")
+            print("⚠️ Yetersiz oyuncu kaldı - Ana menüye dönülecek")
             playHaptic(style: .error)
-            gameState.gamePhase = .oyunBitti
-            syncGameState()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.resetToMainMenu()
+            }
         }
     }
     
@@ -1083,6 +1522,12 @@ extension MultipeerManager: MCSessionDelegate {
             if !gameState.players.contains(where: { $0.deviceID == player.deviceID }) {
                 gameState.players.append(player)
                 gameState.activePlayers.append(player)
+                
+                // Host succession listesine ekle (eğer yoksa)
+                if !gameState.hostSuccession.contains(player.deviceID) {
+                    gameState.hostSuccession.append(player.deviceID)
+                    print("👑 Host succession güncellendi: \(gameState.hostSuccession)")
+                }
             } else {
                 // Oyuncu bilgilerini güncelle
                 if let index = gameState.players.firstIndex(where: { $0.deviceID == player.deviceID }) {
@@ -1194,6 +1639,27 @@ extension MultipeerManager: MCSessionDelegate {
             if isHost {
                 checkRoundCompletion()
             }
+            
+        // YENİ MESAJ TÜRÜ HANDLİNG'LERİ
+        case .leaveRoom(let deviceID):
+            print("🚪 Oyuncu odadan ayrıldı: \(deviceID)")
+            handlePlayerLeave(deviceID: deviceID)
+            
+        case .hostChanged(let newHostDeviceID):
+            print("👑 Host değişikliği bildirimi alındı: \(newHostDeviceID)")
+            handleHostChange(newHostDeviceID: newHostDeviceID)
+            
+        case .playAgainRequest(let deviceID):
+            print("🔄 Tekrar oyna isteği alındı: \(deviceID)")
+            handlePlayAgainRequest(from: deviceID)
+            
+        case .playAgainResponse(let deviceID, let accepted):
+            print("🔄 Tekrar oyna yanıtı alındı: \(deviceID) - \(accepted ? "Kabul" : "Ret")")
+            handlePlayAgainResponse(from: deviceID, accepted: accepted)
+            
+        case .restartTournament:
+            print("🔄 Turnuva yeniden başlatma komutu alındı")
+            handleTournamentRestart()
         }
     }
     

@@ -15,6 +15,11 @@ enum NetworkMessage: Codable {
     case roomCodeRequest(code: String) // Oda kodu ile katılma isteği
     case roomCodeResponse(room: GameRoom?, success: Bool) // Oda bulma yanıtı
     case requestRoomInfo // Oda bilgisi isteme
+    case leaveRoom(deviceID: String) // Oyuncunun odadan ayrılması
+    case hostChanged(newHostDeviceID: String) // Host değişikliği bildirimi
+    case playAgainRequest(deviceID: String) // Tekrar oyna isteği
+    case playAgainResponse(deviceID: String, accepted: Bool) // Tekrar oyna yanıtı
+    case restartTournament // Yeni turnuva başlatma (aynı oyuncularla)
 }
 
 // MARK: - Host Game Settings

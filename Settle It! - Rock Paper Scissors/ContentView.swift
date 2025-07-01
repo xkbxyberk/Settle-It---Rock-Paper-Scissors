@@ -129,6 +129,16 @@ struct ContentView: View {
         .onChange(of: showMenu) { _, isShowingMenu in
             handleMenuTransition(isShowingMenu: isShowingMenu)
         }
+        // YENİ: GameState değişikliklerini izle ve otomatik olarak ana menüye dön
+        .onChange(of: multipeerManager.gameState) { _, newGameState in
+            // Eğer GameState tamamen temizlenmişse (resetToMainMenu çağrıldıysa) ana menüye dön
+            if newGameState.currentRoom == nil &&
+               newGameState.players.isEmpty &&
+               !showMenu {
+                print("🔄 GameState temizlendi - Ana menüye dönülüyor")
+                showMenu = true
+            }
+        }
     }
     
     // MARK: - Game Phase View
@@ -284,8 +294,9 @@ struct ContentView: View {
     }
     
     private func returnToMainMenu() {
+        // resetGame() multipeerManager'da resetToMainMenu()'u çağırır
+        // onChange(of: multipeerManager.gameState) GameState temizlendiğinde showMenu = true yapar
         multipeerManager.resetGame()
-        showMenu = true
     }
     
     // MARK: - Helper Methods

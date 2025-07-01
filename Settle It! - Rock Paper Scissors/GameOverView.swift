@@ -16,6 +16,32 @@ struct GameOverView: View {
         multipeerManager.gameState.currentRound
     }
     
+    /// Tekrar oyna durumu
+    private var playAgainState: PlayAgainState {
+        if !multipeerManager.gameState.isWaitingForPlayAgainResponses {
+            return .notStarted
+        }
+        
+        let totalPlayers = multipeerManager.gameState.players.count
+        let responseCount = multipeerManager.gameState.playAgainRequests.count
+        let currentUserResponse = multipeerManager.gameState.playAgainRequests[multipeerManager.getCurrentUserDeviceID()]
+        
+        if responseCount == totalPlayers {
+            // Tüm yanıtlar geldi - kabul eden oyuncu sayısını kontrol et
+            let acceptingCount = multipeerManager.gameState.playAgainRequests.values.filter { $0 }.count
+            
+            if acceptingCount >= 2 {
+                return .acceptedWithSomePlayers(acceptingCount: acceptingCount, totalPlayers: totalPlayers)
+            } else {
+                return .insufficientPlayers(acceptingCount: acceptingCount)
+            }
+        } else if currentUserResponse != nil {
+            return .waitingForOthers
+        } else {
+            return .waitingForResponse
+        }
+    }
+    
     // MARK: - Body
     var body: some View {
         VStack(spacing: 40) {
@@ -31,6 +57,9 @@ struct GameOverView: View {
             
             // MARK: - Stats Section
             statsSection
+            
+            // MARK: - Play Again Section - YENİ
+            playAgainSection
             
             // MARK: - Action Button
             actionButton
@@ -256,18 +285,195 @@ struct GameOverView: View {
         )
     }
     
+    // MARK: - Play Again Section - YENİ
+    private var playAgainSection: some View {
+        VStack(spacing: 16) {
+            
+            switch playAgainState {
+            case .notStarted:
+                // Tekrar oyna butonu (sadece host için)
+                if multipeerManager.isHost {
+                    Button(action: {
+                        multipeerManager.playHaptic(style: .medium)
+                        multipeerManager.requestPlayAgain()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "repeat.circle.fill")
+                                .font(.title2)
+                            
+                            Text("Tekrar Oyna")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            Text("(Aynı Oyuncularla)")
+                                .font(.subheadline)
+                                .opacity(0.8)
+                        }
+                        .foregroundColor(.green)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        )
+                    }
+                }
+                
+            case .waitingForResponse:
+                // Kullanıcı yanıtı bekleniyor
+                VStack(spacing: 12) {
+                    Text("🔄 Tekrar Oyna Teklifi")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("Aynı oyuncularla yeni bir turnuva başlatmak ister misin?")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                    
+                    HStack(spacing: 16) {
+                        Button("Hayır") {
+                            multipeerManager.playHaptic(style: .light)
+                            multipeerManager.respondToPlayAgain(accepted: false)
+                        }
+                        .foregroundColor(.red)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                        
+                        Button("Evet") {
+                            multipeerManager.playHaptic(style: .success)
+                            multipeerManager.respondToPlayAgain(accepted: true)
+                        }
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.green)
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        )
+                    }
+                }
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.blue.opacity(0.2))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                        )
+                )
+                
+            case .waitingForOthers:
+                // Diğer oyuncular bekleniyor
+                VStack(spacing: 12) {
+                    Text("⏳ Diğer Oyuncular Bekleniyor")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("Yanıtın alındı. Diğer oyuncuların karar vermesi bekleniyor...")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                    
+                    // Progress göstergesi
+                    PlayAgainProgressView(
+                        responses: multipeerManager.gameState.playAgainRequests,
+                        players: multipeerManager.gameState.players
+                    )
+                }
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.orange.opacity(0.2))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                        )
+                )
+                
+            case .acceptedWithSomePlayers(let acceptingCount, let totalPlayers):
+                // Bazı oyuncular kabul etti - yeni turnuva başlıyor
+                VStack(spacing: 12) {
+                    Text("🎉 Yeni Turnuva Başlıyor!")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.green)
+                    
+                    if acceptingCount == totalPlayers {
+                        Text("Tüm oyuncular kabul etti. Birazdan lobi ekranına döneceksiniz...")
+                    } else {
+                        Text("\(acceptingCount)/\(totalPlayers) oyuncu kabul etti. Reddeden oyuncular çıkarılıp yeni turnuva başlayacak...")
+                    }
+                }
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.green.opacity(0.2))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                        )
+                )
+                
+            case .insufficientPlayers(let acceptingCount):
+                // Yetersiz oyuncu kabul etti - ana menüye dönülecek
+                VStack(spacing: 12) {
+                    Text("❌ Yetersiz Kabul")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.red)
+                    
+                    Text("Sadece \(acceptingCount) oyuncu kabul etti (minimum 2 gerekli). Ana menüye dönülecek...")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.red.opacity(0.2))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                        )
+                )
+            }
+        }
+    }
+    
     // MARK: - Action Button
     private var actionButton: some View {
         VStack(spacing: 12) {
+            // Ana menü butonu - her zaman göster
             Button(action: {
                 multipeerManager.playHaptic(style: .heavy)
                 multipeerManager.resetGame()
             }) {
                 HStack(spacing: 12) {
-                    Image(systemName: "arrow.counterclockwise.circle.fill")
+                    Image(systemName: "house.circle.fill")
                         .font(.title2)
                     
-                    Text("Yeni Turnuva")
+                    Text("Ana Menü")
                         .font(.headline)
                         .fontWeight(.semibold)
                 }
@@ -283,7 +489,7 @@ struct GameOverView: View {
             .scaleEffect(1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: multipeerManager.gameState.gamePhase)
             
-            Text("Ana menüye dönmek için yeni turnuva başlatın")
+            Text("Ana menüye dönmek için her şeyi sıfırlar")
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
@@ -297,6 +503,115 @@ struct GameOverView: View {
         case .sallama: return "📱"
         case .none: return "❓"
         }
+    }
+}
+
+// MARK: - Play Again State
+enum PlayAgainState {
+    case notStarted
+    case waitingForResponse
+    case waitingForOthers
+    case acceptedWithSomePlayers(acceptingCount: Int, totalPlayers: Int)
+    case insufficientPlayers(acceptingCount: Int)
+}
+
+// MARK: - Play Again Progress View
+struct PlayAgainProgressView: View {
+    let responses: [String: Bool]
+    let players: [Player]
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Yanıtlar: \(responses.count)/\(players.count)")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.9))
+                
+                Spacer()
+                
+                // Kabul/ret sayısı
+                let acceptingCount = responses.values.filter { $0 }.count
+                let rejectingCount = responses.values.filter { !$0 }.count
+                
+                HStack(spacing: 16) {
+                    Label("\(acceptingCount)", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    
+                    Label("\(rejectingCount)", systemImage: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            }
+            
+            // Oyuncu yanıt durumları
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: min(players.count, 4)), spacing: 8) {
+                ForEach(players.prefix(8), id: \.id) { player in
+                    PlayerResponseIndicator(
+                        player: player,
+                        response: responses[player.deviceID]
+                    )
+                }
+            }
+            
+            // Ek bilgi
+            if responses.count == players.count {
+                let acceptingCount = responses.values.filter { $0 }.count
+                if acceptingCount >= 2 {
+                    Text("✅ \(acceptingCount) oyuncu devam edecek")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                        .fontWeight(.medium)
+                } else {
+                    Text("❌ Minimum 2 oyuncu gerekli (\(acceptingCount) kabul etti)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .fontWeight(.medium)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Player Response Indicator
+struct PlayerResponseIndicator: View {
+    let player: Player
+    let response: Bool?
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(responseColor.opacity(0.3))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Circle()
+                            .stroke(responseColor, lineWidth: 2)
+                    )
+                
+                if let response = response {
+                    Image(systemName: response ? "checkmark" : "xmark")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(responseColor)
+                } else {
+                    Text(player.avatar)
+                        .font(.system(size: 12))
+                }
+            }
+            
+            Text(player.displayName)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(.white.opacity(0.8))
+                .lineLimit(1)
+        }
+    }
+    
+    private var responseColor: Color {
+        guard let response = response else { return .white.opacity(0.5) }
+        return response ? .green : .red
     }
 }
 

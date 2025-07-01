@@ -52,21 +52,21 @@ struct HowToPlayView: View {
                 )
                 .ignoresSafeArea()
                 
-                VStack(spacing: 30) {
-                    
-                    // MARK: - Header
-                    headerSection
-                    
-                    // MARK: - Tutorial Content
-                    tutorialContentSection
-                    
-                    // MARK: - Navigation Controls
-                    navigationControlsSection
-                    
-                    Spacer()
+                ResponsiveContainer {
+                    VStack(spacing: ResponsiveSpacing.extraLarge) {
+                        
+                        // MARK: - Header
+                        headerSection
+                        
+                        // MARK: - Tutorial Content
+                        tutorialContentSection
+                        
+                        // MARK: - Navigation Controls
+                        navigationControlsSection
+                        
+                        Spacer()
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -75,12 +75,13 @@ struct HowToPlayView: View {
                         presentationMode.wrappedValue.dismiss()
                     }
                     .foregroundColor(.white)
+                    .font(ResponsiveFont.callout)
                     .fontWeight(.semibold)
                 }
             }
         }
         .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+            withAnimation(ResponsiveAnimation.default.delay(0.2)) {
                 animateContent = true
             }
         }
@@ -88,41 +89,41 @@ struct HowToPlayView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             Text("📖")
-                .font(.system(size: 50))
+                .font(ResponsiveFont.emoji(size: .medium))
                 .scaleEffect(animateContent ? 1.0 : 0.5)
-                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: animateContent)
+                .animation(ResponsiveAnimation.default.delay(0.1), value: animateContent)
             
             Text("Nasıl Oynanır?")
-                .font(.title)
+                .font(ResponsiveFont.title)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .opacity(animateContent ? 1.0 : 0.0)
                 .offset(y: animateContent ? 0 : 20)
-                .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3), value: animateContent)
+                .animation(ResponsiveAnimation.default.delay(0.3), value: animateContent)
             
             Text("Adım adım oyun rehberi")
-                .font(.subheadline)
+                .font(ResponsiveFont.subheadline)
                 .foregroundColor(.white.opacity(0.8))
                 .opacity(animateContent ? 1.0 : 0.0)
                 .offset(y: animateContent ? 0 : 20)
-                .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: animateContent)
+                .animation(ResponsiveAnimation.default.delay(0.4), value: animateContent)
         }
     }
     
     // MARK: - Tutorial Content Section
     private var tutorialContentSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             // Progress indicator
-            HStack(spacing: 8) {
+            HStack(spacing: ResponsiveSpacing.small) {
                 ForEach(0..<steps.count, id: \.self) { index in
                     Circle()
                         .fill(index <= currentStep ? Color.white : Color.white.opacity(0.3))
-                        .frame(width: 8, height: 8)
+                        .frame(width: ResponsiveSize.iconSmall * 0.4, height: ResponsiveSize.iconSmall * 0.4)
                         .scaleEffect(index == currentStep ? 1.3 : 1.0)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: currentStep)
+                        .animation(ResponsiveAnimation.fast, value: currentStep)
                 }
             }
             .opacity(animateContent ? 1.0 : 0.0)
@@ -135,30 +136,30 @@ struct HowToPlayView: View {
     
     // MARK: - Navigation Controls Section
     private var navigationControlsSection: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: ResponsiveSpacing.medium) {
             
             // Previous button
             Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                withAnimation(ResponsiveAnimation.fast) {
                     if currentStep > 0 {
                         currentStep -= 1
                     }
                 }
             }) {
-                HStack(spacing: 8) {
+                HStack(spacing: ResponsiveSpacing.small) {
                     Image(systemName: "chevron.left")
                     Text("Önceki")
                 }
-                .font(.subheadline)
+                .font(ResponsiveFont.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(currentStep > 0 ? .white : .white.opacity(0.5))
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
+                .padding(.vertical, ResponsiveSpacing.medium)
+                .padding(.horizontal, ResponsivePadding.content)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.white.opacity(currentStep > 0 ? 0.2 : 0.1))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.white.opacity(currentStep > 0 ? 0.3 : 0.2), lineWidth: 1)
                         )
                 )
@@ -170,14 +171,14 @@ struct HowToPlayView: View {
             // Next/Close button
             Button(action: {
                 if currentStep < steps.count - 1 {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    withAnimation(ResponsiveAnimation.fast) {
                         currentStep += 1
                     }
                 } else {
                     presentationMode.wrappedValue.dismiss()
                 }
             }) {
-                HStack(spacing: 8) {
+                HStack(spacing: ResponsiveSpacing.small) {
                     Text(currentStep < steps.count - 1 ? "Sonraki" : "Tamam")
                     
                     if currentStep < steps.count - 1 {
@@ -186,13 +187,13 @@ struct HowToPlayView: View {
                         Image(systemName: "checkmark")
                     }
                 }
-                .font(.subheadline)
+                .font(ResponsiveFont.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
+                .padding(.vertical, ResponsiveSpacing.medium)
+                .padding(.horizontal, ResponsivePadding.content)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(currentStep < steps.count - 1 ? Color.blue : Color.green)
                         .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                 )
@@ -200,7 +201,7 @@ struct HowToPlayView: View {
         }
         .opacity(animateContent ? 1.0 : 0.0)
         .offset(y: animateContent ? 0 : 20)
-        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.7), value: animateContent)
+        .animation(ResponsiveAnimation.default.delay(0.7), value: animateContent)
     }
 }
 
@@ -218,65 +219,49 @@ struct TutorialStepCard: View {
     let isAnimated: Bool
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             // Icon
             ZStack {
                 Circle()
                     .fill(step.color.opacity(0.3))
-                    .frame(width: 80, height: 80)
+                    .frame(width: ResponsiveSize.countdownCircle * 0.4, height: ResponsiveSize.countdownCircle * 0.4)
                     .overlay(
                         Circle()
                             .stroke(step.color.opacity(0.5), lineWidth: 2)
                     )
                 
                 Image(systemName: step.icon)
-                    .font(.system(size: 32))
+                    .font(.system(size: ResponsiveSize.countdownCircle * 0.15))
                     .foregroundColor(step.color)
             }
             .scaleEffect(isAnimated ? 1.0 : 0.3)
-            .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.5), value: isAnimated)
+            .animation(ResponsiveAnimation.default.delay(0.5), value: isAnimated)
             
             // Content
-            VStack(spacing: 12) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 Text(step.title)
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                 
                 Text(step.description)
-                    .font(.body)
+                    .font(ResponsiveFont.body)
                     .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
             .opacity(isAnimated ? 1.0 : 0.0)
             .offset(y: isAnimated ? 0 : 30)
-            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.6), value: isAnimated)
+            .animation(ResponsiveAnimation.default.delay(0.6), value: isAnimated)
         }
-        .padding(.vertical, 30)
-        .padding(.horizontal, 20)
+        .padding(.vertical, ResponsiveSpacing.extraLarge)
+        .padding(.horizontal, ResponsivePadding.content)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(0.15),
-                            Color.white.opacity(0.05)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .responsiveCard()
         .scaleEffect(isAnimated ? 1.0 : 0.8)
-        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: isAnimated)
+        .animation(ResponsiveAnimation.default.delay(0.4), value: isAnimated)
     }
 }
 

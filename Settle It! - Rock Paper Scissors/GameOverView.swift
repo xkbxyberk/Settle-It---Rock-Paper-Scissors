@@ -44,46 +44,46 @@ struct GameOverView: View {
     
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 40) {
-            
-            // MARK: - Header
-            headerSection
-            
-            // MARK: - Winner Section
-            winnerSection
-            
-            // MARK: - Final Standings
-            finalStandingsSection
-            
-            // MARK: - Stats Section
-            statsSection
-            
-            // MARK: - Play Again Section - YENİ
-            playAgainSection
-            
-            // MARK: - Action Button
-            actionButton
-            
-            Spacer()
+        ResponsiveContainer {
+            VStack(spacing: ResponsiveSpacing.huge) {
+                
+                // MARK: - Header
+                headerSection
+                
+                // MARK: - Winner Section
+                winnerSection
+                
+                // MARK: - Final Standings
+                finalStandingsSection
+                
+                // MARK: - Stats Section
+                statsSection
+                
+                // MARK: - Play Again Section
+                playAgainSection
+                
+                // MARK: - Action Button
+                actionButton
+                
+                Spacer()
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
     }
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 15) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             Text("🏆")
-                .font(.system(size: 80))
+                .font(ResponsiveFont.emoji(size: .large))
                 .scaleEffect(1.2)
             
             Text("Turnuva Bitti!")
-                .font(.largeTitle)
+                .font(ResponsiveFont.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
             Text("Tebrikler! Harika bir turnuva oldu.")
-                .font(.title3)
+                .font(ResponsiveFont.title3)
                 .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
@@ -91,11 +91,11 @@ struct GameOverView: View {
     
     // MARK: - Winner Section
     private var winnerSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             if let winner = winner {
                 // Kazanan var
-                VStack(spacing: 16) {
+                VStack(spacing: ResponsiveSpacing.medium) {
                     // Winner avatar with crown
                     ZStack {
                         Circle()
@@ -106,42 +106,42 @@ struct GameOverView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 120, height: 120)
+                            .frame(width: ResponsiveSize.avatarExtraLarge, height: ResponsiveSize.avatarExtraLarge)
                             .overlay(
                                 Circle()
                                     .stroke(Color.white, lineWidth: 4)
                             )
                         
                         Text(winner.avatar)
-                            .font(.system(size: 50))
+                            .font(ResponsiveFont.emoji(size: .medium))
                         
                         // Crown overlay
                         Text("👑")
-                            .font(.system(size: 40))
-                            .offset(y: -50)
+                            .font(ResponsiveFont.emoji(size: .small))
+                            .offset(y: -ResponsiveSize.avatarExtraLarge * 0.35)
                     }
                     
-                    VStack(spacing: 8) {
+                    VStack(spacing: ResponsiveSpacing.small) {
                         Text("🏆 BÜYÜK KAZANAN")
-                            .font(.headline)
+                            .font(ResponsiveFont.headline)
                             .fontWeight(.bold)
                             .foregroundColor(.yellow)
                         
                         Text(winner.displayName)
-                            .font(.title)
+                            .font(ResponsiveFont.title)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                         
                         Text("Mükemmel performans! 🎉")
-                            .font(.title2)
+                            .font(ResponsiveFont.title2)
                             .foregroundColor(.white.opacity(0.9))
                     }
                 }
-                .padding(.vertical, 30)
+                .padding(.vertical, ResponsiveSpacing.extraLarge)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [.yellow.opacity(0.3), .orange.opacity(0.2)]),
@@ -150,35 +150,35 @@ struct GameOverView: View {
                             )
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.yellow.opacity(0.5), lineWidth: 2)
                         )
                 )
                 
             } else {
                 // Kazanan yok
-                VStack(spacing: 16) {
+                VStack(spacing: ResponsiveSpacing.medium) {
                     Image(systemName: "questionmark.circle.fill")
-                        .font(.system(size: 80))
+                        .font(ResponsiveFont.emoji(size: .large))
                         .foregroundColor(.gray)
                     
                     Text("Kazanan Yok")
-                        .font(.title)
+                        .font(ResponsiveFont.title)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                     
                     Text("Turnuva sonuçlanamadı")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                 }
-                .padding(.vertical, 30)
+                .padding(.vertical, ResponsiveSpacing.extraLarge)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.gray.opacity(0.2))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.gray.opacity(0.4), lineWidth: 1)
                         )
                 )
@@ -188,13 +188,13 @@ struct GameOverView: View {
     
     // MARK: - Final Standings Section
     private var finalStandingsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
             Text("🏅 Final Sıralaması")
-                .font(.headline)
+                .font(ResponsiveFont.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            VStack(spacing: 8) {
+            VStack(spacing: ResponsiveSpacing.small) {
                 // Kazanan (1. sıra)
                 if let winner = winner {
                     PlayerStandingRow(
@@ -218,12 +218,12 @@ struct GameOverView: View {
                 }
             }
         }
-        .padding(20)
+        .padding(ResponsivePadding.content)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.1))
+            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
         )
@@ -231,63 +231,63 @@ struct GameOverView: View {
     
     // MARK: - Stats Section
     private var statsSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             Text("📊 Turnuva İstatistikleri")
-                .font(.headline)
+                .font(ResponsiveFont.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            HStack(spacing: 30) {
+            HStack(spacing: ResponsiveSpacing.extraLarge) {
                 // Toplam tur
-                VStack(spacing: 4) {
+                VStack(spacing: ResponsiveSpacing.tiny) {
                     Text("\(totalRounds)")
-                        .font(.title)
+                        .font(ResponsiveFont.title)
                         .fontWeight(.bold)
                         .foregroundColor(.blue)
                     
                     Text("Toplam Tur")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.white.opacity(0.7))
                 }
                 
                 // Toplam oyuncu
-                VStack(spacing: 4) {
+                VStack(spacing: ResponsiveSpacing.tiny) {
                     Text("\(multipeerManager.gameState.players.count)")
-                        .font(.title)
+                        .font(ResponsiveFont.title)
                         .fontWeight(.bold)
                         .foregroundColor(.green)
                     
                     Text("Oyuncu")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.white.opacity(0.7))
                 }
                 
                 // Oyun modu
-                VStack(spacing: 4) {
+                VStack(spacing: ResponsiveSpacing.tiny) {
                     Text(modeIcon)
-                        .font(.title)
+                        .font(ResponsiveFont.title)
                     
                     Text("Oyun Modu")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.white.opacity(0.7))
                 }
             }
         }
-        .padding(.vertical, 20)
+        .padding(.vertical, ResponsiveSpacing.medium)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.1))
+            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
         )
     }
     
-    // MARK: - Play Again Section - YENİ
+    // MARK: - Play Again Section
     private var playAgainSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             switch playAgainState {
             case .notStarted:
@@ -297,23 +297,25 @@ struct GameOverView: View {
                         multipeerManager.playHaptic(style: .medium)
                         multipeerManager.requestPlayAgain()
                     }) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: ResponsiveSpacing.medium) {
                             Image(systemName: "repeat.circle.fill")
-                                .font(.title2)
+                                .font(ResponsiveFont.title2)
                             
-                            Text("Tekrar Oyna")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            Text("(Aynı Oyuncularla)")
-                                .font(.subheadline)
-                                .opacity(0.8)
+                            VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
+                                Text("Tekrar Oyna")
+                                    .font(ResponsiveFont.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("(Aynı Oyuncularla)")
+                                    .font(ResponsiveFont.subheadline)
+                                    .opacity(0.8)
+                            }
                         }
                         .foregroundColor(.green)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, ResponsiveSpacing.medium)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .fill(Color.white)
                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                         )
@@ -322,30 +324,30 @@ struct GameOverView: View {
                 
             case .waitingForResponse:
                 // Kullanıcı yanıtı bekleniyor
-                VStack(spacing: 12) {
+                VStack(spacing: ResponsiveSpacing.medium) {
                     Text("🔄 Tekrar Oyna Teklifi")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                     
                     Text("Aynı oyuncularla yeni bir turnuva başlatmak ister misin?")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                     
-                    HStack(spacing: 16) {
+                    HStack(spacing: ResponsiveSpacing.medium) {
                         Button("Hayır") {
                             multipeerManager.playHaptic(style: .light)
                             multipeerManager.respondToPlayAgain(accepted: false)
                         }
                         .foregroundColor(.red)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 24)
+                        .padding(.vertical, ResponsiveSpacing.medium)
+                        .padding(.horizontal, ResponsiveSpacing.large)
                         .background(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .fill(Color.white)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                         .stroke(Color.red.opacity(0.3), lineWidth: 1)
                                 )
                         )
@@ -356,36 +358,36 @@ struct GameOverView: View {
                         }
                         .foregroundColor(.white)
                         .fontWeight(.semibold)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 24)
+                        .padding(.vertical, ResponsiveSpacing.medium)
+                        .padding(.horizontal, ResponsiveSpacing.large)
                         .background(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .fill(Color.green)
                                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                         )
                     }
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.blue.opacity(0.2))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.blue.opacity(0.4), lineWidth: 1)
                         )
                 )
                 
             case .waitingForOthers:
                 // Diğer oyuncular bekleniyor
-                VStack(spacing: 12) {
+                VStack(spacing: ResponsiveSpacing.medium) {
                     Text("⏳ Diğer Oyuncular Bekleniyor")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                     
                     Text("Yanıtın alındı. Diğer oyuncuların karar vermesi bekleniyor...")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                     
@@ -395,65 +397,64 @@ struct GameOverView: View {
                         players: multipeerManager.gameState.players
                     )
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.orange.opacity(0.2))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.orange.opacity(0.4), lineWidth: 1)
                         )
                 )
                 
             case .acceptedWithSomePlayers(let acceptingCount, let totalPlayers):
                 // Bazı oyuncular kabul etti - yeni turnuva başlıyor
-                VStack(spacing: 12) {
+                VStack(spacing: ResponsiveSpacing.medium) {
                     Text("🎉 Yeni Turnuva Başlıyor!")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.green)
                     
-                    if acceptingCount == totalPlayers {
-                        Text("Tüm oyuncular kabul etti. Birazdan lobi ekranına döneceksiniz...")
-                    } else {
-                        Text("\(acceptingCount)/\(totalPlayers) oyuncu kabul etti. Reddeden oyuncular çıkarılıp yeni turnuva başlayacak...")
-                    }
+                    Text(acceptingCount == totalPlayers
+                         ? "Tüm oyuncular kabul etti. Birazdan lobi ekranına döneceksiniz..."
+                         : "\(acceptingCount)/\(totalPlayers) oyuncu kabul etti. Reddeden oyuncular çıkarılıp yeni turnuva başlayacak..."
+                    )
+                    .font(ResponsiveFont.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
                 }
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
-                .multilineTextAlignment(.center)
-                .padding(.vertical, 20)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.green.opacity(0.2))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.green.opacity(0.4), lineWidth: 1)
                         )
                 )
                 
             case .insufficientPlayers(let acceptingCount):
                 // Yetersiz oyuncu kabul etti - ana menüye dönülecek
-                VStack(spacing: 12) {
+                VStack(spacing: ResponsiveSpacing.medium) {
                     Text("❌ Yetersiz Kabul")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.red)
                     
                     Text("Sadece \(acceptingCount) oyuncu kabul etti (minimum 2 gerekli). Ana menüye dönülecek...")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.red.opacity(0.2))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .stroke(Color.red.opacity(0.4), lineWidth: 1)
                         )
                 )
@@ -463,34 +464,34 @@ struct GameOverView: View {
     
     // MARK: - Action Button
     private var actionButton: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             // Ana menü butonu - her zaman göster
             Button(action: {
                 multipeerManager.playHaptic(style: .heavy)
                 multipeerManager.resetGame()
             }) {
-                HStack(spacing: 12) {
+                HStack(spacing: ResponsiveSpacing.medium) {
                     Image(systemName: "house.circle.fill")
-                        .font(.title2)
+                        .font(ResponsiveFont.title2)
                     
                     Text("Ana Menü")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.semibold)
                 }
                 .foregroundColor(.blue)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.white)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                 )
             }
             .scaleEffect(1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: multipeerManager.gameState.gamePhase)
+            .animation(ResponsiveAnimation.fast, value: multipeerManager.gameState.gamePhase)
             
             Text("Ana menüye dönmek için her şeyi sıfırlar")
-                .font(.caption)
+                .font(ResponsiveFont.caption)
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
         }
@@ -521,10 +522,10 @@ struct PlayAgainProgressView: View {
     let players: [Player]
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             HStack {
                 Text("Yanıtlar: \(responses.count)/\(players.count)")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.white.opacity(0.9))
                 
@@ -534,19 +535,19 @@ struct PlayAgainProgressView: View {
                 let acceptingCount = responses.values.filter { $0 }.count
                 let rejectingCount = responses.values.filter { !$0 }.count
                 
-                HStack(spacing: 16) {
+                HStack(spacing: ResponsiveSpacing.medium) {
                     Label("\(acceptingCount)", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.green)
                     
                     Label("\(rejectingCount)", systemImage: "xmark.circle.fill")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.red)
                 }
             }
             
             // Oyuncu yanıt durumları
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: min(players.count, 4)), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: min(players.count, 4)), spacing: ResponsiveSpacing.small) {
                 ForEach(players.prefix(8), id: \.id) { player in
                     PlayerResponseIndicator(
                         player: player,
@@ -558,17 +559,13 @@ struct PlayAgainProgressView: View {
             // Ek bilgi
             if responses.count == players.count {
                 let acceptingCount = responses.values.filter { $0 }.count
-                if acceptingCount >= 2 {
-                    Text("✅ \(acceptingCount) oyuncu devam edecek")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                        .fontWeight(.medium)
-                } else {
-                    Text("❌ Minimum 2 oyuncu gerekli (\(acceptingCount) kabul etti)")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .fontWeight(.medium)
-                }
+                Text(acceptingCount >= 2
+                     ? "✅ \(acceptingCount) oyuncu devam edecek"
+                     : "❌ Minimum 2 oyuncu gerekli (\(acceptingCount) kabul etti)"
+                )
+                .font(ResponsiveFont.caption)
+                .foregroundColor(acceptingCount >= 2 ? .green : .red)
+                .fontWeight(.medium)
             }
         }
     }
@@ -580,11 +577,11 @@ struct PlayerResponseIndicator: View {
     let response: Bool?
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: ResponsiveSpacing.tiny) {
             ZStack {
                 Circle()
                     .fill(responseColor.opacity(0.3))
-                    .frame(width: 32, height: 32)
+                    .frame(width: ResponsiveSize.avatarSmall * 0.8, height: ResponsiveSize.avatarSmall * 0.8)
                     .overlay(
                         Circle()
                             .stroke(responseColor, lineWidth: 2)
@@ -592,17 +589,17 @@ struct PlayerResponseIndicator: View {
                 
                 if let response = response {
                     Image(systemName: response ? "checkmark" : "xmark")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .fontWeight(.bold)
                         .foregroundColor(responseColor)
                 } else {
                     Text(player.avatar)
-                        .font(.system(size: 12))
+                        .font(.system(size: ResponsiveSize.avatarSmall * 0.3))
                 }
             }
             
             Text(player.displayName)
-                .font(.caption2)
+                .font(ResponsiveFont.caption)
                 .fontWeight(.medium)
                 .foregroundColor(.white.opacity(0.8))
                 .lineLimit(1)
@@ -622,19 +619,19 @@ struct PlayerStandingRow: View {
     let isWinner: Bool
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: ResponsiveSpacing.medium) {
             // Position
             ZStack {
                 Circle()
                     .fill(positionColor.opacity(0.3))
-                    .frame(width: 32, height: 32)
+                    .frame(width: ResponsiveSize.avatarSmall * 0.8, height: ResponsiveSize.avatarSmall * 0.8)
                     .overlay(
                         Circle()
                             .stroke(positionColor, lineWidth: 2)
                     )
                 
                 Text("\(position)")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(positionColor)
             }
@@ -643,32 +640,32 @@ struct PlayerStandingRow: View {
             ZStack {
                 Circle()
                     .fill(Color.white.opacity(0.2))
-                    .frame(width: 40, height: 40)
+                    .frame(width: ResponsiveSize.avatarSmall, height: ResponsiveSize.avatarSmall)
                     .overlay(
                         Circle()
                             .stroke(Color.white.opacity(0.3), lineWidth: 1)
                     )
                 
                 Text(player.avatar)
-                    .font(.title3)
+                    .font(.system(size: ResponsiveSize.avatarSmall * 0.7))
                 
                 // Crown for winner
                 if isWinner {
                     Text("👑")
-                        .font(.caption)
-                        .offset(x: 12, y: -12)
+                        .font(ResponsiveFont.caption)
+                        .offset(x: ResponsiveSize.avatarSmall * 0.3, y: -ResponsiveSize.avatarSmall * 0.3)
                 }
             }
             
             // Player info
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                 Text(player.displayName)
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                 
                 Text(isWinner ? "KAZANAN" : "Elendi")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(isWinner ? .yellow : .white.opacity(0.6))
             }
             
@@ -677,20 +674,20 @@ struct PlayerStandingRow: View {
             // Medal/Status
             if isWinner {
                 Text("🏆")
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
             } else {
                 Image(systemName: "checkmark.circle")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .foregroundColor(.white.opacity(0.5))
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.vertical, ResponsiveSpacing.small)
+        .padding(.horizontal, ResponsiveSpacing.medium)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                 .fill(isWinner ? Color.yellow.opacity(0.15) : Color.white.opacity(0.05))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .stroke(isWinner ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 1)
                 )
         )

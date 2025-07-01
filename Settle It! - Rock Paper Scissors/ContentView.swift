@@ -81,11 +81,12 @@ struct ContentView: View {
                                 returnToMainMenu()
                             }
                             .foregroundColor(.white)
+                            .font(ResponsiveFont.callout)
                             .fontWeight(.semibold)
                             .opacity(toolbarOpacity)
                             .scaleEffect(toolbarScale)
                             .animation(
-                                .spring(response: 0.6, dampingFraction: 0.8).delay(0.2),
+                                ResponsiveAnimation.default.delay(0.2),
                                 value: toolbarOpacity
                             )
                         }
@@ -96,7 +97,7 @@ struct ContentView: View {
                                 .opacity(toolbarOpacity)
                                 .scaleEffect(toolbarScale)
                                 .animation(
-                                    .spring(response: 0.6, dampingFraction: 0.8).delay(0.3),
+                                    ResponsiveAnimation.default.delay(0.3),
                                     value: toolbarOpacity
                                 )
                         }
@@ -166,19 +167,19 @@ struct ContentView: View {
     // MARK: - Game Phase Indicator
     @ViewBuilder
     private var gamePhaseIndicator: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: ResponsiveSpacing.small) {
             Circle()
                 .fill(getPhaseColor())
-                .frame(width: 8, height: 8)
+                .frame(width: ResponsiveSize.iconSmall * 0.4, height: ResponsiveSize.iconSmall * 0.4)
                 .animation(.easeInOut(duration: 0.3), value: multipeerManager.gameState.gamePhase)
             
             Text(getPhaseText())
-                .font(.caption)
+                .font(ResponsiveFont.caption)
                 .fontWeight(.medium)
                 .foregroundColor(.white.opacity(0.8))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, ResponsiveSpacing.medium)
+        .padding(.vertical, ResponsiveSpacing.small)
         .background(
             Capsule()
                 .fill(Color.white.opacity(0.2))
@@ -200,7 +201,7 @@ struct ContentView: View {
             toolbarScale = 0.8
             
             // Oyun ekranını sağda gizli konumda hazırla
-            gameAnimationOffset = UIScreen.main.bounds.width
+            gameAnimationOffset = ScreenSize.width
             gameScale = 0.9
             gameRotation = 5
         } else {
@@ -212,7 +213,7 @@ struct ContentView: View {
             toolbarScale = 1.0
             
             // Ana menüyü solda gizli konumda hazırla
-            menuAnimationOffset = -UIScreen.main.bounds.width
+            menuAnimationOffset = -ScreenSize.width
             menuScale = 0.95
             menuRotation = 0
         }
@@ -245,7 +246,7 @@ struct ContentView: View {
         }
         
         // Oyun ekranını sağdan merkeze getir (aşağıdan yukarı yerine)
-        gameAnimationOffset = UIScreen.main.bounds.width
+        gameAnimationOffset = ScreenSize.width
         gameScale = 0.9
         gameRotation = 5
         
@@ -275,14 +276,14 @@ struct ContentView: View {
         }
         
         // Ana menüyü hemen hazır konuma getir (soldan gelecek gibi)
-        menuAnimationOffset = -UIScreen.main.bounds.width
+        menuAnimationOffset = -ScreenSize.width
         menuScale = 0.95
         menuRotation = 0
         
         // Oyun ekranı sağa doğru slide out + ana menü soldan slide in (eşzamanlı)
         withAnimation(.spring(response: response * 0.8, dampingFraction: damping + 0.1)) {
             // Oyun ekranı sağa kaydır
-            gameAnimationOffset = UIScreen.main.bounds.width
+            gameAnimationOffset = ScreenSize.width
             gameScale = 0.9
             gameRotation = 5
             
@@ -344,166 +345,168 @@ struct ProfileSetupView: View {
                 )
                 .ignoresSafeArea()
                 
-                VStack(spacing: 25) {
-                    
-                    // MARK: - Header
-                    VStack(spacing: 16) {
-                        Text("👤")
-                            .font(.system(size: 50))
-                            .scaleEffect(animateContent ? 1.0 : 0.5)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: animateContent)
+                ScrollView {
+                    VStack(spacing: ResponsiveSpacing.large) {
                         
-                        Text("Profil Ayarla")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .opacity(animateContent ? 1.0 : 0.0)
-                            .offset(y: animateContent ? 0 : 20)
-                            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3), value: animateContent)
-                        
-                        Text("Oyunda görünecek ismin ve avatarın")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
-                            .opacity(animateContent ? 1.0 : 0.0)
-                            .offset(y: animateContent ? 0 : 20)
-                            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: animateContent)
-                    }
-                    
-                    // MARK: - Profile Preview
-                    VStack(spacing: 20) {
-                        // Avatar Display
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 100, height: 100)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                                )
+                        // MARK: - Header
+                        VStack(spacing: ResponsiveSpacing.medium) {
+                            Text("👤")
+                                .font(ResponsiveFont.emoji(size: .medium))
+                                .scaleEffect(animateContent ? 1.0 : 0.5)
+                                .animation(ResponsiveAnimation.default.delay(0.1), value: animateContent)
                             
-                            Text(tempAvatar)
-                                .font(.system(size: 50))
+                            Text("Profil Ayarla")
+                                .font(ResponsiveFont.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .opacity(animateContent ? 1.0 : 0.0)
+                                .offset(y: animateContent ? 0 : 20)
+                                .animation(ResponsiveAnimation.default.delay(0.3), value: animateContent)
+                            
+                            Text("Oyunda görünecek ismin ve avatarın")
+                                .font(ResponsiveFont.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                                .opacity(animateContent ? 1.0 : 0.0)
+                                .offset(y: animateContent ? 0 : 20)
+                                .animation(ResponsiveAnimation.default.delay(0.4), value: animateContent)
                         }
-                        .scaleEffect(animateContent ? 1.0 : 0.3)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.5), value: animateContent)
                         
-                        // Nickname Input
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Kullanıcı Adı")
-                                .font(.headline)
+                        // MARK: - Profile Preview
+                        VStack(spacing: ResponsiveSpacing.medium) {
+                            // Avatar Display
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white.opacity(0.2))
+                                    .frame(width: ResponsiveSize.avatarExtraLarge, height: ResponsiveSize.avatarExtraLarge)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                                    )
+                                
+                                Text(tempAvatar)
+                                    .font(ResponsiveFont.emoji(size: .medium))
+                            }
+                            .scaleEffect(animateContent ? 1.0 : 0.3)
+                            .animation(ResponsiveAnimation.default.delay(0.5), value: animateContent)
+                            
+                            // Nickname Input
+                            VStack(alignment: .leading, spacing: ResponsiveSpacing.small) {
+                                Text("Kullanıcı Adı")
+                                    .font(ResponsiveFont.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                
+                                TextField("Kullanıcı adını gir", text: $tempNickname)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .font(ResponsiveFont.body)
+                                    .autocapitalization(.words)
+                                    .disableAutocorrection(true)
+                            }
+                            .opacity(animateContent ? 1.0 : 0.0)
+                            .offset(y: animateContent ? 0 : 30)
+                            .animation(ResponsiveAnimation.default.delay(0.6), value: animateContent)
+                        }
+                        
+                        // MARK: - Avatar Selection
+                        VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
+                            Text("Avatar Seç")
+                                .font(ResponsiveFont.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
                             
-                            TextField("Kullanıcı adını gir", text: $tempNickname)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .font(.body)
-                                .autocapitalization(.words)
-                                .disableAutocorrection(true)
+                            // Category Tabs
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: ResponsiveSpacing.medium) {
+                                    ForEach(Array(AvatarOptions.categories.enumerated()), id: \.offset) { index, category in
+                                        CategoryTabButton(
+                                            icon: category.icon,
+                                            title: category.name,
+                                            isSelected: selectedCategory == index,
+                                            multipeerManager: multipeerManager
+                                        ) {
+                                            selectedCategory = index
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, ResponsiveSpacing.tiny)
+                            }
+                            
+                            // Avatar Grid for Selected Category
+                            ScrollView {
+                                LazyVGrid(columns: ResponsiveGrid.avatarColumns, spacing: ResponsiveSpacing.medium) {
+                                    ForEach(AvatarOptions.categories[selectedCategory].emojis, id: \.self) { avatar in
+                                        Button(action: {
+                                            tempAvatar = avatar
+                                            multipeerManager.playHaptic(style: .light)
+                                        }) {
+                                            Text(avatar)
+                                                .font(ResponsiveFont.emoji(size: .small))
+                                                .frame(width: ResponsiveSize.avatarSmall, height: ResponsiveSize.avatarSmall)
+                                                .background(
+                                                    Circle()
+                                                        .fill(tempAvatar == avatar ? Color.white.opacity(0.3) : Color.white.opacity(0.1))
+                                                        .overlay(
+                                                            Circle()
+                                                                .stroke(tempAvatar == avatar ? Color.white : Color.white.opacity(0.3), lineWidth: 2)
+                                                        )
+                                                )
+                                                .scaleEffect(tempAvatar == avatar ? 1.1 : 1.0)
+                                                .animation(ResponsiveAnimation.fast, value: tempAvatar)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, ResponsiveSpacing.small)
+                            }
+                            .frame(maxHeight: DeviceType.current == .phone ? 300 : 400)
                         }
                         .opacity(animateContent ? 1.0 : 0.0)
                         .offset(y: animateContent ? 0 : 30)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.6), value: animateContent)
-                    }
-                    
-                    // MARK: - Avatar Selection
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Avatar Seç")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                        .animation(ResponsiveAnimation.default.delay(0.7), value: animateContent)
+                        
+                        Spacer()
+                        
+                        // MARK: - Action Buttons
+                        HStack(spacing: ResponsiveSpacing.medium) {
+                            Button("İptal") {
+                                presentationMode.wrappedValue.dismiss()
+                            }
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.vertical, ResponsiveSpacing.medium)
+                            .padding(.horizontal, ResponsiveSpacing.large)
+                            .background(
+                                RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                                    .fill(Color.white.opacity(0.2))
+                            )
+                            
+                            Button("Kaydet") {
+                                // Profili güncelle ve kaydet
+                                userProfile.nickname = tempNickname.isEmpty ? "Oyuncu" : tempNickname
+                                userProfile.avatar = tempAvatar
+                                userProfile.save()
+                                
+                                multipeerManager.playHaptic(style: .success)
+                                
+                                presentationMode.wrappedValue.dismiss()
+                            }
                             .foregroundColor(.white)
-                        
-                        // Category Tabs
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(Array(AvatarOptions.categories.enumerated()), id: \.offset) { index, category in
-                                    CategoryTabButton(
-                                        icon: category.icon,
-                                        title: category.name,
-                                        isSelected: selectedCategory == index,
-                                        multipeerManager: multipeerManager
-                                    ) {
-                                        selectedCategory = index
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 4)
+                            .fontWeight(.semibold)
+                            .padding(.vertical, ResponsiveSpacing.medium)
+                            .padding(.horizontal, ResponsiveSpacing.large)
+                            .background(
+                                RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                                    .fill(Color.blue)
+                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            )
+                            .disabled(tempNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .opacity(tempNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
                         }
-                        
-                        // Avatar Grid for Selected Category
-                        ScrollView {
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 12) {
-                                ForEach(AvatarOptions.categories[selectedCategory].emojis, id: \.self) { avatar in
-                                    Button(action: {
-                                        tempAvatar = avatar
-                                        multipeerManager.playHaptic(style: .light)
-                                    }) {
-                                        Text(avatar)
-                                            .font(.system(size: 30))
-                                            .frame(width: 50, height: 50)
-                                            .background(
-                                                Circle()
-                                                    .fill(tempAvatar == avatar ? Color.white.opacity(0.3) : Color.white.opacity(0.1))
-                                                    .overlay(
-                                                        Circle()
-                                                            .stroke(tempAvatar == avatar ? Color.white : Color.white.opacity(0.3), lineWidth: 2)
-                                                    )
-                                            )
-                                            .scaleEffect(tempAvatar == avatar ? 1.1 : 1.0)
-                                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: tempAvatar)
-                                    }
-                                }
-                            }
-                            .padding(.vertical, 8)
-                        }
-                        .frame(maxHeight: 300)
+                        .opacity(animateContent ? 1.0 : 0.0)
+                        .offset(y: animateContent ? 0 : 20)
+                        .animation(ResponsiveAnimation.default.delay(0.8), value: animateContent)
                     }
-                    .opacity(animateContent ? 1.0 : 0.0)
-                    .offset(y: animateContent ? 0 : 30)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.7), value: animateContent)
-                    
-                    Spacer()
-                    
-                    // MARK: - Action Buttons
-                    HStack(spacing: 16) {
-                        Button("İptal") {
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                        .foregroundColor(.white.opacity(0.8))
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 24)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.white.opacity(0.2))
-                        )
-                        
-                        Button("Kaydet") {
-                            // Profili güncelle ve kaydet
-                            userProfile.nickname = tempNickname.isEmpty ? "Oyuncu" : tempNickname
-                            userProfile.avatar = tempAvatar
-                            userProfile.save()
-                            
-                            multipeerManager.playHaptic(style: .success)
-                            
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                        .foregroundColor(.white)
-                        .fontWeight(.semibold)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 24)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.blue)
-                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        )
-                        .disabled(tempNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .opacity(tempNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
-                    }
-                    .opacity(animateContent ? 1.0 : 0.0)
-                    .offset(y: animateContent ? 0 : 20)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.8), value: animateContent)
+                    .padding(.horizontal, ResponsivePadding.horizontal)
+                    .padding(.top, ResponsivePadding.vertical)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
             }
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -511,7 +514,7 @@ struct ProfileSetupView: View {
             tempNickname = userProfile.nickname
             tempAvatar = userProfile.avatar
             
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+            withAnimation(ResponsiveAnimation.default.delay(0.2)) {
                 animateContent = true
             }
         }
@@ -531,29 +534,29 @@ struct CategoryTabButton: View {
             multipeerManager.playHaptic(style: .light)
             action()
         }) {
-            VStack(spacing: 6) {
+            VStack(spacing: ResponsiveSpacing.small) {
                 Image(systemName: icon)
-                    .font(.title3)
+                    .font(ResponsiveFont.title3)
                     .foregroundColor(isSelected ? .blue : .white.opacity(0.7))
                 
                 Text(title)
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .fontWeight(.medium)
                     .foregroundColor(isSelected ? .blue : .white.opacity(0.7))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, ResponsiveSpacing.medium)
+            .padding(.vertical, ResponsiveSpacing.small)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                     .fill(isSelected ? Color.white : Color.white.opacity(0.1))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                             .stroke(isSelected ? Color.clear : Color.white.opacity(0.2), lineWidth: 1)
                     )
             )
         }
         .scaleEffect(isSelected ? 1.05 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(ResponsiveAnimation.fast, value: isSelected)
     }
 }
 

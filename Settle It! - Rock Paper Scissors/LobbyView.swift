@@ -25,25 +25,25 @@ struct LobbyView: View {
     
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 30) {
-            
-            // MARK: - Header
-            headerSection
-            
-            // MARK: - Room Section
-            if currentRoom != nil {
-                roomInfoSection
-                playersListSection
-                startGameSection
-            } else {
-                noRoomSection
-                createRoomSection
+        ResponsiveContainer {
+            VStack(spacing: ResponsiveSpacing.extraLarge) {
+                
+                // MARK: - Header
+                headerSection
+                
+                // MARK: - Room Section
+                if currentRoom != nil {
+                    roomInfoSection
+                    playersListSection
+                    startGameSection
+                } else {
+                    noRoomSection
+                    createRoomSection
+                }
+                
+                Spacer()
             }
-            
-            Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
         .onAppear {
             // Lobi'ye geldiğimizde servisleri yeniden başlat
             multipeerManager.restartServices()
@@ -79,17 +79,17 @@ struct LobbyView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: ResponsiveSpacing.small) {
             Text("🎯")
-                .font(.system(size: 60))
+                .font(ResponsiveFont.emoji(size: .medium))
             
             Text("Taş Kağıt Makas")
-                .font(.largeTitle)
+                .font(ResponsiveFont.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
             Text("Turnuva")
-                .font(.title2)
+                .font(ResponsiveFont.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.white.opacity(0.9))
         }
@@ -97,20 +97,20 @@ struct LobbyView: View {
     
     // MARK: - Room Info Section
     private var roomInfoSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             HStack {
                 Image(systemName: "door.left.hand.open")
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
                     .foregroundColor(.green)
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                     Text(currentRoom?.roomName ?? "Bilinmeyen Oda")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                     
                     Text(isHost ? "Sen host'sun" : "Odaya katıldın")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.8))
                 }
                 
@@ -118,31 +118,31 @@ struct LobbyView: View {
                 
                 if isHost {
                     Image(systemName: "crown.fill")
-                        .font(.title3)
+                        .font(ResponsiveFont.title3)
                         .foregroundColor(.yellow)
                 }
             }
             
             // Oda Kodu Gösterimi
             if let room = currentRoom {
-                VStack(spacing: 8) {
+                VStack(spacing: ResponsiveSpacing.small) {
                     Text("🔑 Oda Kodu")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.white.opacity(0.9))
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: ResponsiveSpacing.small) {
                         Text(room.roomCode)
-                            .font(.title)
+                            .font(ResponsiveFont.title)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, ResponsiveSpacing.medium)
+                            .padding(.vertical, ResponsiveSpacing.small)
                             .background(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                     .fill(Color.white.opacity(0.2))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
+                                        RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                             .stroke(Color.white.opacity(0.4), lineWidth: 1)
                                     )
                             )
@@ -152,80 +152,65 @@ struct LobbyView: View {
                             multipeerManager.playHaptic(style: .light)
                         }) {
                             Image(systemName: "doc.on.doc")
-                                .font(.title3)
+                                .font(ResponsiveFont.title3)
                                 .foregroundColor(.white.opacity(0.7))
                         }
                     }
                     
                     Text("Arkadaşların bu kodu girip odana katılabilir")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.white.opacity(0.6))
                         .multilineTextAlignment(.center)
                 }
-                .padding(.top, 8)
+                .padding(.top, ResponsiveSpacing.small)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.green.opacity(0.2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
-                )
-        )
+        .responsiveCard(backgroundColor: Color.green.opacity(0.2), borderColor: Color.green.opacity(0.4))
     }
     
     // MARK: - No Room Section
     private var noRoomSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             Image(systemName: "person.2.slash")
-                .font(.system(size: 50))
+                .font(ResponsiveFont.emoji(size: .medium))
                 .foregroundColor(.white.opacity(0.5))
             
             Text("Henüz hiçbir odaya katılmadın")
-                .font(.headline)
+                .font(ResponsiveFont.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
             
             Text("Yeni bir oda oluştur veya yakındaki odalara otomatik katıl")
-                .font(.subheadline)
+                .font(ResponsiveFont.subheadline)
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
-        .padding(.vertical, 30)
+        .padding(.vertical, ResponsiveSpacing.extraLarge)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .responsiveCard()
     }
     
     // MARK: - Create Room Section
     private var createRoomSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             // Yeni Oda Oluştur
             Button(action: {
                 showCreateRoom = true
             }) {
-                HStack(spacing: 12) {
+                HStack(spacing: ResponsiveSpacing.medium) {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title2)
+                        .font(ResponsiveFont.title2)
                     
                     Text("Yeni Oda Oluştur")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.semibold)
                 }
                 .foregroundColor(.blue)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.white)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                 )
@@ -235,32 +220,32 @@ struct LobbyView: View {
             Button(action: {
                 showJoinRoom = true
             }) {
-                HStack(spacing: 12) {
+                HStack(spacing: ResponsiveSpacing.medium) {
                     Image(systemName: "key.fill")
-                        .font(.title2)
+                        .font(ResponsiveFont.title2)
                     
                     Text("Odaya Katıl")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.semibold)
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .fill(Color.blue)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                 )
             }
             
-            VStack(spacing: 4) {
+            VStack(spacing: ResponsiveSpacing.tiny) {
                 Text("Arkadaşlarınla oynamak için bir oda oluştur")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
                 
                 Text("veya oda kodunu girerek katıl")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
@@ -269,12 +254,12 @@ struct LobbyView: View {
     
     // MARK: - Players List Section
     private var playersListSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
             
             // Başlık
             HStack {
                 Text("👥 Odadaki Oyuncular")
-                    .font(.headline)
+                    .font(ResponsiveFont.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                 
@@ -282,11 +267,11 @@ struct LobbyView: View {
                 
                 // Oyuncu sayısı badge
                 Text("\(multipeerManager.gameState.players.count)")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.blue)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, ResponsiveSpacing.small)
+                    .padding(.vertical, ResponsiveSpacing.tiny)
                     .background(Color.white)
                     .clipShape(Capsule())
             }
@@ -300,40 +285,32 @@ struct LobbyView: View {
                 playersListView
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.15))
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .responsiveCard()
     }
     
     // MARK: - Empty Players View
     private var emptyPlayersView: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: ResponsiveSpacing.small) {
             Image(systemName: "person.2.slash")
-                .font(.system(size: 40))
+                .font(ResponsiveFont.emoji(size: .small))
                 .foregroundColor(.white.opacity(0.5))
             
             Text("Henüz kimse katılmadı")
-                .font(.subheadline)
+                .font(ResponsiveFont.subheadline)
                 .foregroundColor(.white.opacity(0.7))
             
             Text("Diğer cihazların katılmasını bekleyin")
-                .font(.caption)
+                .font(ResponsiveFont.caption)
                 .foregroundColor(.white.opacity(0.5))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        .padding(.vertical, ResponsiveSpacing.medium)
     }
     
     // MARK: - Players List View
     private var playersListView: some View {
-        LazyVStack(spacing: 12) {
+        LazyVGrid(columns: ResponsiveGrid.playerColumns, spacing: ResponsiveSpacing.medium) {
             ForEach(multipeerManager.gameState.players, id: \.id) { player in
                 PlayerRowView(
                     player: player,
@@ -346,7 +323,7 @@ struct LobbyView: View {
     
     // MARK: - Start Game Section
     private var startGameSection: some View {
-        VStack(spacing: 15) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             if isHost {
                 if multipeerManager.gameState.players.count >= 2 {
                     // Oyun başlatma butonu (sadece host için)
@@ -354,72 +331,58 @@ struct LobbyView: View {
                         multipeerManager.playHaptic(style: .heavy)
                         multipeerManager.startGame()
                     }) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: ResponsiveSpacing.medium) {
                             Image(systemName: "play.circle.fill")
-                                .font(.title2)
+                                .font(ResponsiveFont.title2)
                             
                             Text("Turnuvayı Başlat")
-                                .font(.headline)
+                                .font(ResponsiveFont.headline)
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(.blue)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, ResponsiveSpacing.medium)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                                 .fill(Color.white)
                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                         )
                     }
                     .scaleEffect(1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: multipeerManager.gameState.players.count)
+                    .animation(ResponsiveAnimation.fast, value: multipeerManager.gameState.players.count)
                     
                 } else {
                     // Yetersiz oyuncu mesajı (host için)
-                    VStack(spacing: 8) {
+                    VStack(spacing: ResponsiveSpacing.small) {
                         Text("👑 En az 2 oyuncu gerekli")
-                            .font(.subheadline)
+                            .font(ResponsiveFont.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.white.opacity(0.8))
                         
                         Text("Daha fazla oyuncunun katılmasını bekleyin")
-                            .font(.caption)
+                            .font(ResponsiveFont.caption)
                             .foregroundColor(.white.opacity(0.6))
                     }
-                    .padding(.vertical, 16)
+                    .padding(.vertical, ResponsiveSpacing.medium)
                     .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.1))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                    )
+                    .responsiveCard()
                 }
             } else {
                 // Host olmayan oyuncular için bekleme mesajı
-                VStack(spacing: 8) {
+                VStack(spacing: ResponsiveSpacing.small) {
                     Text("⏳ Host'un turnuvayı başlatmasını bekliyor...")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                     
                     Text("Hazır olduğunda turnuva başlayacak")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.white.opacity(0.6))
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.orange.opacity(0.2))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.orange.opacity(0.4), lineWidth: 1)
-                        )
-                )
+                .responsiveCard(backgroundColor: Color.orange.opacity(0.2), borderColor: Color.orange.opacity(0.4))
             }
         }
     }
@@ -432,7 +395,7 @@ struct PlayerRowView: View {
     let isCurrentUser: Bool
     
     var body: some View {
-        HStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.small) {
             // Oyuncu avatarı
             ZStack {
                 Circle()
@@ -446,39 +409,39 @@ struct PlayerRowView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 55, height: 55)
+                    .frame(width: ResponsiveSize.avatarMedium, height: ResponsiveSize.avatarMedium)
                     .overlay(
                         Circle()
                             .stroke(isCurrentUser ? Color.blue : Color.white.opacity(0.5), lineWidth: 2)
                     )
                 
                 Text(player.avatar)
-                    .font(.system(size: 28))
+                    .font(ResponsiveFont.emoji(size: .small))
                 
                 // Host crown
                 if isHost {
                     Text("👑")
-                        .font(.system(size: 16))
-                        .offset(x: 16, y: -16)
+                        .font(ResponsiveFont.subheadline)
+                        .offset(x: ResponsiveSize.avatarMedium * 0.25, y: -ResponsiveSize.avatarMedium * 0.25)
                 }
             }
             
             // Oyuncu bilgileri
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
+            VStack(alignment: .center, spacing: ResponsiveSpacing.tiny) {
+                HStack(spacing: ResponsiveSpacing.tiny) {
                     Text(player.displayName)
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .lineLimit(1)
                     
                     if isCurrentUser {
                         Text("(Sen)")
-                            .font(.caption)
+                            .font(ResponsiveFont.caption)
                             .fontWeight(.medium)
                             .foregroundColor(.blue.opacity(0.8))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, ResponsiveSpacing.tiny)
+                            .padding(.vertical, 1)
                             .background(
                                 Capsule()
                                     .fill(Color.blue.opacity(0.2))
@@ -486,28 +449,26 @@ struct PlayerRowView: View {
                     }
                 }
                 
-                HStack(spacing: 6) {
+                HStack(spacing: ResponsiveSpacing.tiny) {
                     Image(systemName: isHost ? "crown.fill" : "checkmark.circle.fill")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(isHost ? .yellow : .green.opacity(0.8))
                     
                     Text(isHost ? "Oda Host'u" : "Hazır")
-                        .font(.caption)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(isHost ? .yellow.opacity(0.9) : .green.opacity(0.8))
                 }
+                
+                // Bağlantı durumu
+                Image(systemName: "wifi.circle.fill")
+                    .font(ResponsiveFont.subheadline)
+                    .foregroundColor(.green.opacity(0.8))
             }
-            
-            Spacer()
-            
-            // Bağlantı durumu
-            Image(systemName: "wifi.circle.fill")
-                .font(.title3)
-                .foregroundColor(.green.opacity(0.8))
         }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 16)
+        .padding(.vertical, ResponsiveSpacing.small)
+        .padding(.horizontal, ResponsiveSpacing.small)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                 .fill(
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -519,7 +480,7 @@ struct PlayerRowView: View {
                     )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                         .stroke(
                             isCurrentUser ? Color.blue.opacity(0.3) : Color.white.opacity(0.2),
                             lineWidth: 1

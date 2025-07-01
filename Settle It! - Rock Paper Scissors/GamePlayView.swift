@@ -33,18 +33,18 @@ struct GamePlayView: View {
     
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 30) {
-            
-            // MARK: - Round Info
-            roundInfoSection
-            
-            // MARK: - Main Content
-            mainContentSection
-            
-            Spacer()
+        ResponsiveContainer {
+            VStack(spacing: ResponsiveSpacing.extraLarge) {
+                
+                // MARK: - Round Info
+                roundInfoSection
+                
+                // MARK: - Main Content
+                mainContentSection
+                
+                Spacer()
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
         .onAppear {
             setupCountdownTimer()
         }
@@ -55,32 +55,25 @@ struct GamePlayView: View {
     
     // MARK: - Round Info Section
     private var roundInfoSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: ResponsiveSpacing.small) {
             Text("🏆 Tur \(multipeerManager.gameState.currentRound + 1)")
-                .font(.headline)
+                .font(ResponsiveFont.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white.opacity(0.9))
             
             if let gameMode = multipeerManager.gameState.gameMode {
                 Text("Mod: \(gameMode.rawValue)")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .foregroundColor(.white.opacity(0.7))
             }
             
             Text("\(multipeerManager.gameState.activePlayers.count) oyuncu yarışıyor")
-                .font(.caption)
+                .font(ResponsiveFont.caption)
                 .foregroundColor(.white.opacity(0.6))
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, ResponsiveSpacing.medium)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .responsiveCard()
     }
     
     // MARK: - Main Content Section
@@ -100,10 +93,10 @@ struct GamePlayView: View {
     
     // MARK: - Countdown Section
     private var countdownSection: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: ResponsiveSpacing.extraLarge) {
             
             Text("⏰ Hazır Olun!")
-                .font(.largeTitle)
+                .font(ResponsiveFont.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
@@ -111,32 +104,32 @@ struct GamePlayView: View {
             ZStack {
                 Circle()
                     .stroke(Color.white.opacity(0.3), lineWidth: 8)
-                    .frame(width: 150, height: 150)
+                    .frame(width: ResponsiveSize.countdownCircle, height: ResponsiveSize.countdownCircle)
                 
                 Circle()
                     .trim(from: 0, to: CGFloat(countdown) / CGFloat(multipeerManager.settings.countdownDuration))
                     .stroke(Color.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .frame(width: 150, height: 150)
+                    .frame(width: ResponsiveSize.countdownCircle, height: ResponsiveSize.countdownCircle)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 1), value: countdown)
                 
                 Text("\(countdown)")
-                    .font(.system(size: 60, weight: .bold, design: .rounded))
+                    .font(.system(size: ResponsiveSize.countdownCircle * 0.3, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .scaleEffect(countdown == 0 ? 1.2 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: countdown)
+                    .animation(ResponsiveAnimation.fast, value: countdown)
             }
             
-            VStack(spacing: 8) {
+            VStack(spacing: ResponsiveSpacing.small) {
                 if let gameMode = multipeerManager.gameState.gameMode {
                     Text("Mod: \(gameMode.rawValue)")
-                        .font(.title2)
+                        .font(ResponsiveFont.title2)
                         .fontWeight(.medium)
                         .foregroundColor(.white.opacity(0.8))
                 }
                 
                 Text("Seçiminizi yapmaya hazırlanın!")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .foregroundColor(.white.opacity(0.7))
             }
         }
@@ -144,12 +137,12 @@ struct GamePlayView: View {
     
     // MARK: - Gameplay Section
     private var gameplaySection: some View {
-        VStack(spacing: 25) {
+        VStack(spacing: ResponsiveSpacing.large) {
             
             // Header
-            VStack(spacing: 12) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 Text("✂️ Seçiminizi Yapın!")
-                    .font(.largeTitle)
+                    .font(ResponsiveFont.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                 
@@ -171,7 +164,7 @@ struct GamePlayView: View {
     
     // MARK: - Progress Section
     private var progressSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: ResponsiveSpacing.small) {
             ProgressView(value: roundProgress)
                 .progressViewStyle(LinearProgressViewStyle(tint: .white))
                 .scaleEffect(x: 1, y: 2, anchor: .center)
@@ -180,7 +173,7 @@ struct GamePlayView: View {
             
             HStack {
                 Text("Seçim yapan: \(multipeerManager.gameState.choices.count)/\(multipeerManager.gameState.activePlayers.count)")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.white.opacity(0.9))
                 
@@ -192,25 +185,24 @@ struct GamePlayView: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
     }
     
     // MARK: - Players Who Made Choices View
     private var playersWhoMadeChoicesView: some View {
-        HStack(spacing: -6) {
+        HStack(spacing: -ResponsiveSpacing.tiny) {
             ForEach(Array(multipeerManager.gameState.choices.keys.prefix(4)), id: \.self) { deviceID in
                 if let player = multipeerManager.gameState.activePlayers.first(where: { $0.deviceID == deviceID }) {
                     ZStack {
                         Circle()
                             .fill(Color.green.opacity(0.3))
-                            .frame(width: 28, height: 28)
+                            .frame(width: ResponsiveSize.avatarSmall * 0.7, height: ResponsiveSize.avatarSmall * 0.7)
                             .overlay(
                                 Circle()
                                     .stroke(Color.green, lineWidth: 2)
                             )
                         
                         Text(player.avatar)
-                            .font(.system(size: 12))
+                            .font(.system(size: ResponsiveSize.avatarSmall * 0.3))
                     }
                 }
             }
@@ -220,10 +212,10 @@ struct GamePlayView: View {
                 ZStack {
                     Circle()
                         .fill(Color.green.opacity(0.4))
-                        .frame(width: 28, height: 28)
+                        .frame(width: ResponsiveSize.avatarSmall * 0.7, height: ResponsiveSize.avatarSmall * 0.7)
                     
                     Text("+\(multipeerManager.gameState.choices.count - 4)")
-                        .font(.caption2)
+                        .font(ResponsiveFont.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                 }
@@ -245,15 +237,15 @@ struct GamePlayView: View {
     
     // MARK: - Touch Mode View
     private var touchModeView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             Text("👆 Bir seçenek üzerine dokunun")
-                .font(.headline)
+                .font(ResponsiveFont.headline)
                 .foregroundColor(.white.opacity(0.9))
-                .padding(.bottom, 8)
+                .padding(.bottom, ResponsiveSpacing.small)
             
             // Choice buttons
-            VStack(spacing: 12) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 ChoiceButton(
                     choice: .tas,
                     icon: "🪨",
@@ -292,128 +284,107 @@ struct GamePlayView: View {
     
     // MARK: - Shake Mode View
     private var shakeModeView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             Text("📱 Cihazı Sallayın!")
-                .font(.largeTitle)
+                .font(ResponsiveFont.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
-            VStack(spacing: 12) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 Image(systemName: "iphone.shake")
-                    .font(.system(size: 80))
+                    .font(.system(size: ResponsiveSize.countdownCircle * 0.4))
                     .foregroundColor(.white.opacity(0.8))
                     .symbolEffect(.bounce, options: .repeating)
                 
                 Text("Seçim yapmak için")
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
                     .foregroundColor(.white.opacity(0.9))
                 
                 Text("cihazınızı sallayın!")
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                 
                 Text("Rastgele Taş, Kağıt veya Makas seçilecek")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 
                 // Hassasiyet ve açıklama
-                VStack(spacing: 8) {
-                    HStack(spacing: 8) {
+                VStack(spacing: ResponsiveSpacing.small) {
+                    HStack(spacing: ResponsiveSpacing.small) {
                         Image(systemName: "gauge")
-                            .font(.caption)
+                            .font(ResponsiveFont.caption)
                             .foregroundColor(.white.opacity(0.6))
                         
                         Text("Hassasiyet: \(shakeSensitivityText)")
-                            .font(.caption)
+                            .font(ResponsiveFont.caption)
                             .fontWeight(.medium)
                             .foregroundColor(.white.opacity(0.8))
                     }
                     
                     Text(shakeSensitivityDescription)
-                        .font(.caption2)
+                        .font(ResponsiveFont.caption)
                         .foregroundColor(.white.opacity(0.6))
                         .multilineTextAlignment(.center)
                         .italic()
                 }
-                .padding(.top, 8)
+                .padding(.top, ResponsiveSpacing.small)
             }
-            .padding(.vertical, 30)
+            .padding(.vertical, ResponsiveSpacing.extraLarge)
             .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.15))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                    )
-            )
+            .responsiveCard()
         }
     }
     
     // MARK: - Status Section
     private var statusSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             if hasUserMadeChoice {
                 // Kullanıcı seçim yapmış
-                VStack(spacing: 8) {
-                    HStack(spacing: 8) {
+                VStack(spacing: ResponsiveSpacing.small) {
+                    HStack(spacing: ResponsiveSpacing.small) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
                         
                         Text("Seçiminiz alındı!")
                             .fontWeight(.semibold)
                     }
-                    .font(.headline)
+                    .font(ResponsiveFont.headline)
                     .foregroundColor(.white)
                     
                     if let choice = userChoice {
                         Text("Seçiminiz: \(choice.rawValue) \(getChoiceIcon(choice))")
-                            .font(.subheadline)
+                            .font(ResponsiveFont.subheadline)
                             .foregroundColor(.white.opacity(0.8))
                     }
                     
                     Text("Diğer oyuncular bekleniyor...")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.7))
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.green.opacity(0.2))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.green.opacity(0.4), lineWidth: 1)
-                        )
-                )
+                .responsiveCard(backgroundColor: Color.green.opacity(0.2), borderColor: Color.green.opacity(0.4))
                 
             } else {
                 // Kullanıcı henüz seçim yapmamış
-                VStack(spacing: 8) {
+                VStack(spacing: ResponsiveSpacing.small) {
                     Text("⏳ Lütfen seçiminizi yapın")
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.orange)
                     
                     Text("Turun ilerlemesi için seçim yapmanız gerekiyor")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, ResponsiveSpacing.medium)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.orange.opacity(0.2))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.orange.opacity(0.4), lineWidth: 1)
-                        )
-                )
+                .responsiveCard(backgroundColor: Color.orange.opacity(0.2), borderColor: Color.orange.opacity(0.4))
             }
         }
     }
@@ -503,12 +474,12 @@ struct ChoiceButton: View {
             }
             action()
         }) {
-            HStack(spacing: 16) {
+            HStack(spacing: ResponsiveSpacing.medium) {
                 Text(icon)
-                    .font(.system(size: 40))
+                    .font(ResponsiveFont.emoji(size: .small))
                 
                 Text(title)
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
                     .fontWeight(.bold)
                     .foregroundColor(isSelected ? .white : .blue)
                 
@@ -516,20 +487,20 @@ struct ChoiceButton: View {
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
+                        .font(ResponsiveFont.title2)
                         .foregroundColor(.white)
                 }
             }
-            .padding(.vertical, 20)
-            .padding(.horizontal, 24)
+            .padding(.vertical, ResponsiveSpacing.medium)
+            .padding(.horizontal, ResponsiveSpacing.large)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadiusLarge)
                     .fill(isSelected ? Color.blue : Color.white)
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
             )
             .scaleEffect(isSelected ? 1.02 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .animation(ResponsiveAnimation.fast, value: isSelected)
         }
         .disabled(isDisabled)
         .opacity(isDisabled && !isSelected ? 0.6 : 1.0)

@@ -20,7 +20,7 @@ struct SettingsView: View {
                 .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 25) {
+                    VStack(spacing: ResponsiveSpacing.large) {
                         
                         // MARK: - Header
                         headerSection
@@ -42,10 +42,10 @@ struct SettingsView: View {
                         // MARK: - About Section
                         aboutSection
                         
-                        Spacer(minLength: 30)
+                        Spacer(minLength: ResponsiveSpacing.extraLarge)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.horizontal, ResponsivePadding.horizontal)
+                    .padding(.top, ResponsivePadding.vertical)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -55,6 +55,7 @@ struct SettingsView: View {
                         presentationMode.wrappedValue.dismiss()
                     }
                     .foregroundColor(.white)
+                    .font(ResponsiveFont.callout)
                     .fontWeight(.semibold)
                 }
                 
@@ -63,7 +64,7 @@ struct SettingsView: View {
                         multipeerManager.resetSettings()
                     }
                     .foregroundColor(.white.opacity(0.8))
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                 }
             }
         }
@@ -85,7 +86,7 @@ struct SettingsView: View {
             UINavigationBar.appearance().scrollEdgeAppearance = scrollAppearance
             UINavigationBar.appearance().compactAppearance = scrollAppearance
             
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+            withAnimation(ResponsiveAnimation.default.delay(0.2)) {
                 animateContent = true
             }
         }
@@ -93,26 +94,26 @@ struct SettingsView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             Text("⚙️")
-                .font(.system(size: 50))
+                .font(ResponsiveFont.emoji(size: .medium))
                 .scaleEffect(animateContent ? 1.0 : 0.5)
-                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: animateContent)
+                .animation(ResponsiveAnimation.default.delay(0.1), value: animateContent)
             
             Text("Ayarlar")
-                .font(.title)
+                .font(ResponsiveFont.title)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .opacity(animateContent ? 1.0 : 0.0)
                 .offset(y: animateContent ? 0 : 20)
-                .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3), value: animateContent)
+                .animation(ResponsiveAnimation.default.delay(0.3), value: animateContent)
             
             Text("Oyun tercihlerinizi düzenleyin")
-                .font(.subheadline)
+                .font(ResponsiveFont.subheadline)
                 .foregroundColor(.white.opacity(0.8))
                 .opacity(animateContent ? 1.0 : 0.0)
                 .offset(y: animateContent ? 0 : 20)
-                .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: animateContent)
+                .animation(ResponsiveAnimation.default.delay(0.4), value: animateContent)
         }
     }
     
@@ -123,16 +124,16 @@ struct SettingsView: View {
             delay: 0.5,
             isAnimated: animateContent
         ) {
-            VStack(spacing: 16) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 
                 // Connection Type with Icons
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
                     Text("Bağlantı Türü")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.white)
                     
-                    HStack(spacing: 12) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: DeviceType.current == .phone ? 1 : 3), spacing: ResponsiveSpacing.medium) {
                         ForEach(ConnectionType.allCases, id: \.self) { type in
                             ConnectionTypeButton(
                                 type: type,
@@ -167,7 +168,7 @@ struct SettingsView: View {
             delay: 0.6,
             isAnimated: animateContent
         ) {
-            VStack(spacing: 16) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 
                 // Host Info
                 InfoRow(
@@ -213,7 +214,7 @@ struct SettingsView: View {
             delay: multipeerManager.isHost ? 0.7 : 0.6,
             isAnimated: animateContent
         ) {
-            VStack(spacing: 16) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 
                 // Shake Sensitivity (personal setting)
                 SettingRow(
@@ -233,48 +234,39 @@ struct SettingsView: View {
                 )
                 
                 // Sallama modu açıklaması
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: ResponsiveSpacing.small) {
                     Text("📱 Sallama Modu Nasıl Çalışır?")
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.white)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
+                        HStack(alignment: .top, spacing: ResponsiveSpacing.small) {
                             Text("•")
                                 .foregroundColor(.white.opacity(0.7))
                             Text("Cihazınızı herhangi bir yöne sallayın")
-                                .font(.caption)
+                                .font(ResponsiveFont.caption)
                                 .foregroundColor(.white.opacity(0.7))
                         }
                         
-                        HStack(alignment: .top, spacing: 8) {
+                        HStack(alignment: .top, spacing: ResponsiveSpacing.small) {
                             Text("•")
                                 .foregroundColor(.white.opacity(0.7))
                             Text("Hareket algılandığında rastgele seçim yapılır")
-                                .font(.caption)
+                                .font(ResponsiveFont.caption)
                                 .foregroundColor(.white.opacity(0.7))
                         }
                         
-                        HStack(alignment: .top, spacing: 8) {
+                        HStack(alignment: .top, spacing: ResponsiveSpacing.small) {
                             Text("•")
                                 .foregroundColor(.white.opacity(0.7))
                             Text("Hassasiyet arttıkça daha güçlü sallama gerekir")
-                                .font(.caption)
+                                .font(ResponsiveFont.caption)
                                 .foregroundColor(.white.opacity(0.7))
                         }
                     }
                 }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.purple.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.purple.opacity(0.3), lineWidth: 1)
-                        )
-                )
+                .responsiveCard(backgroundColor: Color.purple.opacity(0.15), borderColor: Color.purple.opacity(0.3))
             }
         }
     }
@@ -286,7 +278,7 @@ struct SettingsView: View {
             delay: multipeerManager.isHost ? 0.8 : 0.7,
             isAnimated: animateContent
         ) {
-            VStack(spacing: 16) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 
                 // Sound Effects
                 SettingRow(
@@ -328,7 +320,7 @@ struct SettingsView: View {
             delay: multipeerManager.isHost ? 0.9 : 0.8,
             isAnimated: animateContent
         ) {
-            VStack(spacing: 16) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 
                 SettingRow(
                     icon: "info.circle",
@@ -356,7 +348,7 @@ struct SettingsView: View {
                         multipeerManager.playHaptic(style: .light)
                     }) {
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(ResponsiveFont.caption)
                             .foregroundColor(.white.opacity(0.6))
                     }
                 }
@@ -392,35 +384,35 @@ struct ConnectionTypeButton: View {
             multipeerManager.playHaptic(style: .light)
             action()
         }) {
-            VStack(spacing: 8) {
+            HStack(spacing: ResponsiveSpacing.small) {
                 Image(systemName: type.icon)
-                    .font(.title2)
+                    .font(ResponsiveFont.title3)
                     .foregroundColor(isSelected ? .white : .blue)
                 
                 Text(typeShortName)
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .fontWeight(.medium)
                     .foregroundColor(isSelected ? .white : .blue)
-                    .multilineTextAlignment(.center)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity)
+            .padding(.vertical, ResponsiveSpacing.medium)
+            .padding(.horizontal, ResponsiveSpacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                     .fill(isSelected ? Color.blue : Color.white)
                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
             )
         }
         .scaleEffect(isSelected ? 1.05 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(ResponsiveAnimation.fast, value: isSelected)
     }
     
     private var typeShortName: String {
         switch type {
-        case .wifiOnly: return "Sadece\nWi-Fi"
-        case .bluetoothOnly: return "Sadece\nBluetooth"
-        case .both: return "Wi-Fi +\nBluetooth"
+        case .wifiOnly: return "Sadece Wi-Fi"
+        case .bluetoothOnly: return "Sadece Bluetooth"
+        case .both: return "Wi-Fi + Bluetooth"
         }
     }
 }
@@ -433,35 +425,26 @@ struct InfoRow: View {
     let color: Color
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: ResponsiveSpacing.medium) {
             Image(systemName: icon)
-                .font(.title3)
+                .font(ResponsiveFont.title3)
                 .foregroundColor(color)
-                .frame(width: 24, height: 24)
+                .frame(width: ResponsiveSize.iconMedium, height: ResponsiveSize.iconMedium)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                 Text(title)
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.white)
                 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.7))
             }
             
             Spacer()
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(color.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(color.opacity(0.3), lineWidth: 1)
-                )
-        )
+        .responsiveCard(backgroundColor: color.opacity(0.15), borderColor: color.opacity(0.3))
     }
 }
 
@@ -473,37 +456,20 @@ struct SettingsSection<Content: View>: View {
     let content: () -> Content
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
             Text(title)
-                .font(.headline)
+                .font(ResponsiveFont.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            VStack(spacing: 12) {
+            VStack(spacing: ResponsiveSpacing.medium) {
                 content()
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(0.15),
-                            Color.white.opacity(0.05)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .responsiveCard()
         .opacity(isAnimated ? 1.0 : 0.0)
         .offset(y: isAnimated ? 0 : 30)
-        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(delay), value: isAnimated)
+        .animation(ResponsiveAnimation.default.delay(delay), value: isAnimated)
     }
 }
 
@@ -515,22 +481,22 @@ struct SettingRow<Content: View>: View {
     let content: () -> Content
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: ResponsiveSpacing.medium) {
             // Icon
             Image(systemName: icon)
-                .font(.title3)
+                .font(ResponsiveFont.title3)
                 .foregroundColor(.white.opacity(0.8))
-                .frame(width: 24, height: 24)
+                .frame(width: ResponsiveSize.iconMedium, height: ResponsiveSize.iconMedium)
             
             // Text content
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                 Text(title)
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.white)
                 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.7))
             }
             
@@ -539,7 +505,7 @@ struct SettingRow<Content: View>: View {
             // Control
             content()
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, ResponsiveSpacing.tiny)
     }
 }
 

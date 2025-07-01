@@ -13,16 +13,8 @@ struct MenuView: View {
     
     // MARK: - Body
     var body: some View {
-        ZStack {
-            // Gradient background
-            LinearGradient(
-                gradient: Gradient(colors: [.blue.opacity(0.6), .purple.opacity(0.8)]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 40) {
+        ResponsiveContainer {
+            VStack(spacing: ResponsiveSpacing.huge) {
                 
                 // MARK: - Header Section
                 headerSection
@@ -38,14 +30,11 @@ struct MenuView: View {
                 
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 40)
         }
         .onAppear {
             let animationDelay = multipeerManager.settings.animations ? 0.2 : 0.05
-            let animationDuration = multipeerManager.settings.animations ? 0.8 : 0.3
             
-            withAnimation(.spring(response: animationDuration, dampingFraction: 0.7).delay(animationDelay)) {
+            withAnimation(ResponsiveAnimation.default.delay(animationDelay)) {
                 animateButtons = true
             }
         }
@@ -59,44 +48,44 @@ struct MenuView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             // App Icon - Sadece Dart emojisi, çember yok
             Text("🎯")
-                .font(.system(size: 80))
+                .font(ResponsiveFont.emoji(size: .large))
                 .scaleEffect(animateButtons ? 1.0 : 0.5)
-                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: animateButtons)
+                .animation(ResponsiveAnimation.default.delay(0.1), value: animateButtons)
             
-            VStack(spacing: 12) {
+            VStack(spacing: ResponsiveSpacing.small) {
                 Text("Taş Kağıt Makas")
-                    .font(.largeTitle)
+                    .font(ResponsiveFont.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .opacity(animateButtons ? 1.0 : 0.0)
                     .offset(y: animateButtons ? 0 : 20)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3), value: animateButtons)
+                    .animation(ResponsiveAnimation.default.delay(0.3), value: animateButtons)
                 
                 Text("Turnuva")
-                    .font(.title2)
+                    .font(ResponsiveFont.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.white.opacity(0.9))
                     .opacity(animateButtons ? 1.0 : 0.0)
                     .offset(y: animateButtons ? 0 : 20)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: animateButtons)
+                    .animation(ResponsiveAnimation.default.delay(0.4), value: animateButtons)
                 
                 Text("Arkadaşlarınla multiplayer turnuva yap!")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .opacity(animateButtons ? 1.0 : 0.0)
                     .offset(y: animateButtons ? 0 : 20)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.5), value: animateButtons)
+                    .animation(ResponsiveAnimation.default.delay(0.5), value: animateButtons)
             }
         }
     }
     
     // MARK: - User Profile Section
     private var userProfileSection: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: ResponsiveSpacing.medium) {
             // Avatar with gradient background
             ZStack {
                 Circle()
@@ -107,32 +96,32 @@ struct MenuView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 70, height: 70)
+                    .frame(width: ResponsiveSize.avatarLarge, height: ResponsiveSize.avatarLarge)
                     .overlay(
                         Circle()
                             .stroke(Color.white.opacity(0.4), lineWidth: 2)
                     )
                 
                 Text(userProfile.avatar)
-                    .font(.system(size: 35))
+                    .font(ResponsiveFont.emoji(size: .small))
                     .scaleEffect(animateButtons ? 1.0 : 0.8)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.6), value: animateButtons)
+                    .animation(ResponsiveAnimation.default.delay(0.6), value: animateButtons)
             }
             
             // User Info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                 Text("Hoşgeldin! 👋")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.7))
                 
                 Text(userProfile.nickname)
-                    .font(.title3)
+                    .font(ResponsiveFont.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
                 Text("Hazırsın!")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.8))
             }
             
@@ -146,45 +135,27 @@ struct MenuView: View {
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.2))
-                        .frame(width: 40, height: 40)
+                        .frame(width: ResponsiveSize.avatarSmall, height: ResponsiveSize.avatarSmall)
                         .overlay(
                             Circle()
                                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
                         )
                     
                     Image(systemName: "pencil")
-                        .font(.title3)
+                        .font(ResponsiveFont.title3)
                         .foregroundColor(.white.opacity(0.8))
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(0.15),
-                            Color.white.opacity(0.05)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .responsiveCard()
         .opacity(animateButtons ? 1.0 : 0.0)
         .offset(y: animateButtons ? 0 : 30)
-        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.6), value: animateButtons)
+        .animation(ResponsiveAnimation.default.delay(0.6), value: animateButtons)
     }
     
     // MARK: - Menu Buttons Section
     private var menuButtonsSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: ResponsiveSpacing.medium) {
             
             // Start Game Button
             MenuButton(
@@ -197,7 +168,7 @@ struct MenuView: View {
                 multipeerManager: multipeerManager
             ) {
                 multipeerManager.playHaptic(style: .heavy)
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(ResponsiveAnimation.fast) {
                     showMenu = false
                 }
             }
@@ -234,13 +205,13 @@ struct MenuView: View {
     
     // MARK: - Footer Section
     private var footerSection: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 16) {
+        VStack(spacing: ResponsiveSpacing.small) {
+            HStack(spacing: ResponsiveSpacing.medium) {
                 Image(systemName: "wifi")
                     .foregroundColor(.white.opacity(0.6))
                 
                 Text("Yakındaki cihazları otomatik keşfet ve bağlan")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption)
                     .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
                 
@@ -251,7 +222,7 @@ struct MenuView: View {
             .animation(.easeInOut(duration: 0.8).delay(1.0), value: animateButtons)
             
             Text("v1.0.0 • Made with ❤️")
-                .font(.caption2)
+                .font(ResponsiveFont.caption)
                 .foregroundColor(.white.opacity(0.4))
                 .opacity(animateButtons ? 1.0 : 0.0)
                 .animation(.easeInOut(duration: 0.8).delay(1.2), value: animateButtons)
@@ -280,27 +251,27 @@ struct MenuButton: View {
             // Action
             action()
         }) {
-            HStack(spacing: 16) {
+            HStack(spacing: ResponsiveSpacing.medium) {
                 // Icon
                 ZStack {
                     Circle()
                         .fill(color.opacity(0.2))
-                        .frame(width: 50, height: 50)
+                        .frame(width: ResponsiveSize.avatarSmall, height: ResponsiveSize.avatarSmall)
                     
                     Image(systemName: icon)
-                        .font(.title2)
+                        .font(ResponsiveFont.title2)
                         .foregroundColor(color)
                 }
                 
                 // Text content
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                     Text(title)
-                        .font(.headline)
+                        .font(ResponsiveFont.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                     
                     Text(subtitle)
-                        .font(.subheadline)
+                        .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.7))
                 }
                 
@@ -308,38 +279,20 @@ struct MenuButton: View {
                 
                 // Arrow
                 Image(systemName: "chevron.right")
-                    .font(.subheadline)
+                    .font(ResponsiveFont.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white.opacity(0.5))
             }
-            .padding(.vertical, 20)
-            .padding(.horizontal, 20)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.white.opacity(isPressed ? 0.3 : 0.15),
-                                Color.white.opacity(isPressed ? 0.1 : 0.05)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-            )
         }
+        .responsiveCard()
         .scaleEffect(isPressed ? 0.95 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
+        .animation(ResponsiveAnimation.fast, value: isPressed)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             isPressed = pressing
         }, perform: {})
         .opacity(isAnimated ? 1.0 : 0.0)
         .offset(y: isAnimated ? 0 : 30)
-        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(delay), value: isAnimated)
+        .animation(ResponsiveAnimation.default.delay(delay), value: isAnimated)
     }
 }
 

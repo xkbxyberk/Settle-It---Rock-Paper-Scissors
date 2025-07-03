@@ -81,10 +81,13 @@ struct HowToPlayView: View {
             }
         }
         .onAppear {
-            withAnimation(ResponsiveAnimation.default.delay(0.2)) {
-                animateContent = true
-            }
-        }
+                    // Navigation Bar konfigürasyonunu uygula
+                    NavigationBarConfigurator.configureNavigationBar()
+                    
+                    withAnimation(ResponsiveAnimation.default.delay(0.2)) {
+                        animateContent = true
+                    }
+                }
     }
     
     // MARK: - Header Section

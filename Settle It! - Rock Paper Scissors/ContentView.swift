@@ -56,53 +56,57 @@ struct ContentView: View {
             } else {
                 // Oyun ekranları
                 NavigationView {
-                    ZStack {
-                        // Gradient arkaplan
-                        LinearGradient(
-                            gradient: Gradient(colors: [.blue.opacity(0.6), .purple.opacity(0.8)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .ignoresSafeArea()
-                        
-                        // Ana içerik - oyun aşamasına göre değişir
-                        gamePhaseView
-                            .offset(y: gameAnimationOffset)
-                            .scaleEffect(gameScale)
-                            .rotation3DEffect(
-                                .degrees(gameRotation),
-                                axis: (x: 1, y: 0, z: 0),
-                                perspective: 0.8
-                            )
-                    }
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Ana Menü") {
-                                returnToMainMenu()
-                            }
-                            .foregroundColor(.white)
-                            .font(ResponsiveFont.callout)
-                            .fontWeight(.semibold)
-                            .opacity(toolbarOpacity)
-                            .scaleEffect(toolbarScale)
-                            .animation(
-                                ResponsiveAnimation.default.delay(0.2),
-                                value: toolbarOpacity
-                            )
-                        }
-                        
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            // Game phase indicator
-                            gamePhaseIndicator
-                                .opacity(toolbarOpacity)
-                                .scaleEffect(toolbarScale)
-                                .animation(
-                                    ResponsiveAnimation.default.delay(0.3),
-                                    value: toolbarOpacity
-                                )
-                        }
-                    }
-                }
+                                    ZStack {
+                                        // Gradient arkaplan
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.blue.opacity(0.6), .purple.opacity(0.8)]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                        .ignoresSafeArea()
+                                        
+                                        // Ana içerik - oyun aşamasına göre değişir
+                                        gamePhaseView
+                                            .offset(y: gameAnimationOffset)
+                                            .scaleEffect(gameScale)
+                                            .rotation3DEffect(
+                                                .degrees(gameRotation),
+                                                axis: (x: 1, y: 0, z: 0),
+                                                perspective: 0.8
+                                            )
+                                    }
+                                    .toolbar {
+                                        ToolbarItem(placement: .navigationBarLeading) {
+                                            Button("Ana Menü") {
+                                                returnToMainMenu()
+                                            }
+                                            .foregroundColor(.white)
+                                            .font(ResponsiveFont.callout)
+                                            .fontWeight(.semibold)
+                                            .opacity(toolbarOpacity)
+                                            .scaleEffect(toolbarScale)
+                                            .animation(
+                                                ResponsiveAnimation.default.delay(0.2),
+                                                value: toolbarOpacity
+                                            )
+                                        }
+                                        
+                                        ToolbarItem(placement: .navigationBarTrailing) {
+                                            // Game phase indicator
+                                            gamePhaseIndicator
+                                                .opacity(toolbarOpacity)
+                                                .scaleEffect(toolbarScale)
+                                                .animation(
+                                                    ResponsiveAnimation.default.delay(0.3),
+                                                    value: toolbarOpacity
+                                                )
+                                        }
+                                    }
+                                    .onAppear {
+                                        // Navigation Bar konfigürasyonunu uygula
+                                        NavigationBarConfigurator.configureNavigationBar()
+                                    }
+                                }
                 .environmentObject(multipeerManager)
                 .opacity(showMenu ? 0.0 : 1.0)
                 .alert(item: $multipeerManager.connectionAlert) { (alert: ConnectionAlert) in
@@ -530,13 +534,16 @@ struct ProfileSetupView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
-            tempNickname = userProfile.nickname
-            tempAvatar = userProfile.avatar
-            
-            withAnimation(ResponsiveAnimation.default.delay(0.2)) {
-                animateContent = true
-            }
-        }
+                    // Navigation Bar konfigürasyonunu uygula
+                    NavigationBarConfigurator.configureNavigationBar()
+                    
+                    tempNickname = userProfile.nickname
+                    tempAvatar = userProfile.avatar
+                    
+                    withAnimation(ResponsiveAnimation.default.delay(0.2)) {
+                        animateContent = true
+                    }
+                }
     }
 }
 

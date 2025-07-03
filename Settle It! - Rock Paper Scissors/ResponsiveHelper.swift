@@ -464,3 +464,29 @@ struct ResponsiveAnimation {
         }
     }
 }
+
+// MARK: - Navigation Bar Configuration Helper
+struct NavigationBarConfigurator {
+    
+    /// Tüm Navigation Bar'lar için standart görünüm konfigürasyonu
+    /// Açık modda bile net görünür, gradient-uyumlu şeffaf arka plan
+    static func configureNavigationBar() {
+        // Navigation bar için hafif şeffaf gradient-uyumlu background ayarla
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        
+        // Gradient'e uyumlu hafif şeffaf renk (mor-mavi karışımı)
+        let gradientColor = UIColor(red: 0.4, green: 0.5, blue: 0.8, alpha: 0.15)
+        appearance.backgroundColor = gradientColor
+        
+        // Scroll edildiğinde de aynı hafif şeffaf background
+        let scrollAppearance = UINavigationBarAppearance()
+        scrollAppearance.configureWithOpaqueBackground()
+        scrollAppearance.backgroundColor = gradientColor
+        
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = scrollAppearance
+        UINavigationBar.appearance().compactAppearance = scrollAppearance
+        
+    }
+}

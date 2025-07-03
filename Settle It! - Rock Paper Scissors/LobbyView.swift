@@ -86,7 +86,7 @@ struct LobbyView: View {
             Text("🎯")
                 .font(ResponsiveFont.emoji(size: .medium))
             
-            Text("Taş Kağıt Makas")
+            Text("Taş - Kağıt - Makas")
                 .font(ResponsiveFont.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)

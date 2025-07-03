@@ -56,7 +56,7 @@ struct MenuView: View {
                 .animation(ResponsiveAnimation.default.delay(0.1), value: animateButtons)
             
             VStack(spacing: ResponsiveSpacing.small) {
-                Text("Taş Kağıt Makas")
+                Text("Taş - Kağıt - Makas")
                     .font(ResponsiveFont.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)

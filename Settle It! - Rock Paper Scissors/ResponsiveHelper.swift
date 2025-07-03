@@ -48,129 +48,41 @@ struct ScreenSize {
     }
 }
 
-// MARK: - Responsive Spacing
+// MARK: - Responsive Spacing (Küçültüldü)
 struct ResponsiveSpacing {
     static var tiny: CGFloat {
         switch DeviceType.current {
-        case .phone: return 4
-        case .padCompact: return 6
-        case .padRegular: return 8
+        case .phone: return 2
+        case .padCompact: return 3
+        case .padRegular: return 4
         }
     }
     
     static var small: CGFloat {
         switch DeviceType.current {
-        case .phone: return 8
-        case .padCompact: return 12
-        case .padRegular: return 16
+        case .phone: return 6
+        case .padCompact: return 8
+        case .padRegular: return 10
         }
     }
     
     static var medium: CGFloat {
         switch DeviceType.current {
-        case .phone: return 16
-        case .padCompact: return 20
-        case .padRegular: return 24
+        case .phone: return 12
+        case .padCompact: return 14
+        case .padRegular: return 16
         }
     }
     
     static var large: CGFloat {
         switch DeviceType.current {
-        case .phone: return 24
-        case .padCompact: return 32
-        case .padRegular: return 40
+        case .phone: return 18
+        case .padCompact: return 22
+        case .padRegular: return 26
         }
     }
     
     static var extraLarge: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 32
-        case .padCompact: return 40
-        case .padRegular: return 48
-        }
-    }
-    
-    static var huge: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 40
-        case .padCompact: return 50
-        case .padRegular: return 60
-        }
-    }
-}
-
-// MARK: - Responsive Padding
-struct ResponsivePadding {
-    static var horizontal: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 20
-        case .padCompact: return 32
-        case .padRegular: return 48
-        }
-    }
-    
-    static var vertical: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 16
-        case .padCompact: return 24
-        case .padRegular: return 32
-        }
-    }
-    
-    static var content: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 20
-        case .padCompact: return 24
-        case .padRegular: return 32
-        }
-    }
-}
-
-// MARK: - Responsive Sizes
-struct ResponsiveSize {
-    // Avatar boyutları
-    static var avatarSmall: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 40
-        case .padCompact: return 48
-        case .padRegular: return 56
-        }
-    }
-    
-    static var avatarMedium: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 55
-        case .padCompact: return 65
-        case .padRegular: return 75
-        }
-    }
-    
-    static var avatarLarge: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 70
-        case .padCompact: return 85
-        case .padRegular: return 100
-        }
-    }
-    
-    static var avatarExtraLarge: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 100
-        case .padCompact: return 120
-        case .padRegular: return 140
-        }
-    }
-    
-    // Icon boyutları
-    static var iconSmall: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 20
-        case .padCompact: return 24
-        case .padRegular: return 28
-        }
-    }
-    
-    static var iconMedium: CGFloat {
         switch DeviceType.current {
         case .phone: return 24
         case .padCompact: return 28
@@ -178,33 +90,26 @@ struct ResponsiveSize {
         }
     }
     
-    static var iconLarge: CGFloat {
+    static var huge: CGFloat {
         switch DeviceType.current {
-        case .phone: return 32
-        case .padCompact: return 40
-        case .padRegular: return 48
+        case .phone: return 30
+        case .padCompact: return 35
+        case .padRegular: return 40
+        }
+    }
+}
+
+// MARK: - Responsive Padding (Küçültüldü)
+struct ResponsivePadding {
+    static var horizontal: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 16
+        case .padCompact: return 24
+        case .padRegular: return 32
         }
     }
     
-    // Button boyutları
-    static var buttonHeight: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 44
-        case .padCompact: return 50
-        case .padRegular: return 56
-        }
-    }
-    
-    static var buttonHeightLarge: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 56
-        case .padCompact: return 64
-        case .padRegular: return 72
-        }
-    }
-    
-    // Card boyutları
-    static var cardCornerRadius: CGFloat {
+    static var vertical: CGFloat {
         switch DeviceType.current {
         case .phone: return 12
         case .padCompact: return 16
@@ -212,118 +117,213 @@ struct ResponsiveSize {
         }
     }
     
-    static var cardCornerRadiusLarge: CGFloat {
+    static var content: CGFloat {
         switch DeviceType.current {
         case .phone: return 16
-        case .padCompact: return 20
-        case .padRegular: return 24
-        }
-    }
-    
-    // Countdown circle size
-    static var countdownCircle: CGFloat {
-        switch DeviceType.current {
-        case .phone: return 150
-        case .padCompact: return 180
-        case .padRegular: return 220
+        case .padCompact: return 18
+        case .padRegular: return 20
         }
     }
 }
 
-// MARK: - Responsive Font Sizes (Dynamic Type Compatible)
+// MARK: - Responsive Sizes (Küçültüldü)
+struct ResponsiveSize {
+    // Avatar boyutları (küçültüldü)
+    static var avatarSmall: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 32
+        case .padCompact: return 36
+        case .padRegular: return 40
+        }
+    }
+    
+    static var avatarMedium: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 44
+        case .padCompact: return 50
+        case .padRegular: return 56
+        }
+    }
+    
+    static var avatarLarge: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 56
+        case .padCompact: return 64
+        case .padRegular: return 72
+        }
+    }
+    
+    static var avatarExtraLarge: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 80
+        case .padCompact: return 90
+        case .padRegular: return 100
+        }
+    }
+    
+    // Icon boyutları (küçültüldü)
+    static var iconSmall: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 16
+        case .padCompact: return 18
+        case .padRegular: return 20
+        }
+    }
+    
+    static var iconMedium: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 20
+        case .padCompact: return 22
+        case .padRegular: return 24
+        }
+    }
+    
+    static var iconLarge: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 24
+        case .padCompact: return 28
+        case .padRegular: return 32
+        }
+    }
+    
+    // Button boyutları
+    static var buttonHeight: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 44
+        case .padCompact: return 48
+        case .padRegular: return 52
+        }
+    }
+    
+    static var buttonHeightLarge: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 50
+        case .padCompact: return 56
+        case .padRegular: return 62
+        }
+    }
+    
+    // Card boyutları
+    static var cardCornerRadius: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 12
+        case .padCompact: return 14
+        case .padRegular: return 16
+        }
+    }
+    
+    static var cardCornerRadiusLarge: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 16
+        case .padCompact: return 18
+        case .padRegular: return 20
+        }
+    }
+    
+    // Countdown circle size (küçültüldü)
+    static var countdownCircle: CGFloat {
+        switch DeviceType.current {
+        case .phone: return 120
+        case .padCompact: return 140
+        case .padRegular: return 160
+        }
+    }
+}
+
+// MARK: - Responsive Font Sizes (Küçültüldü ve Daha Dengeli)
 struct ResponsiveFont {
     static var largeTitle: Font {
         switch DeviceType.current {
-        case .phone: return .largeTitle
-        case .padCompact: return .custom("System", size: 40, relativeTo: .largeTitle)
-        case .padRegular: return .custom("System", size: 48, relativeTo: .largeTitle)
+        case .phone: return .custom("System", size: 28, relativeTo: .largeTitle)
+        case .padCompact: return .custom("System", size: 32, relativeTo: .largeTitle)
+        case .padRegular: return .custom("System", size: 36, relativeTo: .largeTitle)
         }
     }
     
     static var title: Font {
         switch DeviceType.current {
-        case .phone: return .title
-        case .padCompact: return .custom("System", size: 32, relativeTo: .title)
-        case .padRegular: return .custom("System", size: 36, relativeTo: .title)
+        case .phone: return .custom("System", size: 22, relativeTo: .title)
+        case .padCompact: return .custom("System", size: 26, relativeTo: .title)
+        case .padRegular: return .custom("System", size: 30, relativeTo: .title)
         }
     }
     
     static var title2: Font {
         switch DeviceType.current {
-        case .phone: return .title2
-        case .padCompact: return .custom("System", size: 26, relativeTo: .title2)
-        case .padRegular: return .custom("System", size: 30, relativeTo: .title2)
+        case .phone: return .custom("System", size: 20, relativeTo: .title2)
+        case .padCompact: return .custom("System", size: 22, relativeTo: .title2)
+        case .padRegular: return .custom("System", size: 24, relativeTo: .title2)
         }
     }
     
     static var title3: Font {
         switch DeviceType.current {
-        case .phone: return .title3
-        case .padCompact: return .custom("System", size: 22, relativeTo: .title3)
-        case .padRegular: return .custom("System", size: 26, relativeTo: .title3)
+        case .phone: return .custom("System", size: 18, relativeTo: .title3)
+        case .padCompact: return .custom("System", size: 20, relativeTo: .title3)
+        case .padRegular: return .custom("System", size: 22, relativeTo: .title3)
         }
     }
     
     static var headline: Font {
         switch DeviceType.current {
-        case .phone: return .headline
-        case .padCompact: return .custom("System", size: 20, relativeTo: .headline)
-        case .padRegular: return .custom("System", size: 24, relativeTo: .headline)
+        case .phone: return .custom("System", size: 16, relativeTo: .headline)
+        case .padCompact: return .custom("System", size: 18, relativeTo: .headline)
+        case .padRegular: return .custom("System", size: 20, relativeTo: .headline)
         }
     }
     
     static var body: Font {
         switch DeviceType.current {
-        case .phone: return .body
-        case .padCompact: return .custom("System", size: 19, relativeTo: .body)
-        case .padRegular: return .custom("System", size: 22, relativeTo: .body)
+        case .phone: return .custom("System", size: 16, relativeTo: .body)
+        case .padCompact: return .custom("System", size: 17, relativeTo: .body)
+        case .padRegular: return .custom("System", size: 18, relativeTo: .body)
         }
     }
     
     static var callout: Font {
         switch DeviceType.current {
-        case .phone: return .callout
-        case .padCompact: return .custom("System", size: 18, relativeTo: .callout)
-        case .padRegular: return .custom("System", size: 20, relativeTo: .callout)
+        case .phone: return .custom("System", size: 15, relativeTo: .callout)
+        case .padCompact: return .custom("System", size: 16, relativeTo: .callout)
+        case .padRegular: return .custom("System", size: 17, relativeTo: .callout)
         }
     }
     
     static var subheadline: Font {
         switch DeviceType.current {
-        case .phone: return .subheadline
-        case .padCompact: return .custom("System", size: 17, relativeTo: .subheadline)
-        case .padRegular: return .custom("System", size: 19, relativeTo: .subheadline)
+        case .phone: return .custom("System", size: 14, relativeTo: .subheadline)
+        case .padCompact: return .custom("System", size: 15, relativeTo: .subheadline)
+        case .padRegular: return .custom("System", size: 16, relativeTo: .subheadline)
         }
     }
     
     static var footnote: Font {
         switch DeviceType.current {
-        case .phone: return .footnote
-        case .padCompact: return .custom("System", size: 15, relativeTo: .footnote)
-        case .padRegular: return .custom("System", size: 17, relativeTo: .footnote)
+        case .phone: return .custom("System", size: 12, relativeTo: .footnote)
+        case .padCompact: return .custom("System", size: 13, relativeTo: .footnote)
+        case .padRegular: return .custom("System", size: 14, relativeTo: .footnote)
         }
     }
     
     static var caption: Font {
         switch DeviceType.current {
-        case .phone: return .caption
-        case .padCompact: return .custom("System", size: 14, relativeTo: .caption)
-        case .padRegular: return .custom("System", size: 16, relativeTo: .caption)
+        case .phone: return .custom("System", size: 11, relativeTo: .caption)
+        case .padCompact: return .custom("System", size: 12, relativeTo: .caption)
+        case .padRegular: return .custom("System", size: 13, relativeTo: .caption)
         }
     }
     
-    // Emoji font sizes
+    // Emoji font sizes (önemli ölçüde küçültüldü)
     static func emoji(size: EmojiSize) -> Font {
         switch (DeviceType.current, size) {
-        case (.phone, .small): return .system(size: 30)
-        case (.phone, .medium): return .system(size: 50)
-        case (.phone, .large): return .system(size: 80)
-        case (.padCompact, .small): return .system(size: 36)
-        case (.padCompact, .medium): return .system(size: 60)
-        case (.padCompact, .large): return .system(size: 96)
-        case (.padRegular, .small): return .system(size: 42)
-        case (.padRegular, .medium): return .system(size: 70)
-        case (.padRegular, .large): return .system(size: 112)
+        case (.phone, .small): return .system(size: 24)
+        case (.phone, .medium): return .system(size: 36)
+        case (.phone, .large): return .system(size: 48)
+        case (.padCompact, .small): return .system(size: 28)
+        case (.padCompact, .medium): return .system(size: 42)
+        case (.padCompact, .large): return .system(size: 56)
+        case (.padRegular, .small): return .system(size: 32)
+        case (.padRegular, .medium): return .system(size: 48)
+        case (.padRegular, .large): return .system(size: 64)
         }
     }
 }

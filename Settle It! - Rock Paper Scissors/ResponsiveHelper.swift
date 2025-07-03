@@ -363,11 +363,12 @@ struct ResponsiveGrid {
         return Array(repeating: GridItem(.flexible(), spacing: spacing), count: numberOfColumns)
     }
     
+    // Avatar grid'i yeni kategori sayısına göre güncellendi (9 kategori için)
     static var avatarColumns: [GridItem] {
         switch DeviceType.current {
-        case .phone: return Array(repeating: GridItem(.flexible()), count: 6)
-        case .padCompact: return Array(repeating: GridItem(.flexible()), count: 8)
-        case .padRegular: return Array(repeating: GridItem(.flexible()), count: 10)
+        case .phone: return Array(repeating: GridItem(.flexible()), count: 7) // 7 sütun (daha geniş görünüm)
+        case .padCompact: return Array(repeating: GridItem(.flexible()), count: 9) // 9 sütun
+        case .padRegular: return Array(repeating: GridItem(.flexible()), count: 12) // 12 sütun
         }
     }
     

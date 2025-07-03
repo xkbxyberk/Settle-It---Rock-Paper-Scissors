@@ -6,6 +6,14 @@ struct ResultsView: View {
     /// MultipeerManager'dan geçirilen environment object
     @EnvironmentObject var multipeerManager: MultipeerManager
     
+    /// Aşamalı gösterim için animasyon state'leri
+    @State private var showHeader = false
+    @State private var showChoicesSummary = false
+    @State private var showAnalysis = false
+    @State private var showEliminatedPlayers = false
+    @State private var showContinuingPlayers = false
+    @State private var showFinalMessage = false
+    
     /// Elenen oyuncuları hesaplar
     private var eliminatedPlayers: [Player] {
         // Choices'da olan ama activePlayers'da olmayan oyuncuları bul
@@ -38,24 +46,121 @@ struct ResultsView: View {
         return (hasEliminations: false, winningChoice: nil, losingChoice: nil)
     }
     
+    /// Oyunun bitmek üzere olup olmadığını kontrol eder
+    private var isGameEndingSoon: Bool {
+        return multipeerManager.gameState.activePlayers.count <= 1
+    }
+    
     // MARK: - Body
     var body: some View {
         ResponsiveContainer {
             VStack(spacing: ResponsiveSpacing.extraLarge) {
                 
                 // MARK: - Header
-                headerSection
+                if showHeader {
+                    headerSection
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
+                // MARK: - Choices Summary
+                if showChoicesSummary {
+                    choicesSummaryView
+                        .transition(.scale.combined(with: .opacity))
+                }
                 
                 // MARK: - Round Analysis
-                roundAnalysisSection
+                if showAnalysis {
+                    roundAnalysisSection
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
                 
-                // MARK: - Results Section
-                resultsSection
+                // MARK: - Eliminated Players
+                if showEliminatedPlayers {
+                    eliminationResultsSection
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
                 
                 // MARK: - Continuing Players
-                continuingPlayersSection
+                if showContinuingPlayers {
+                    continuingPlayersSection
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                
+                // MARK: - Final Message
+                if showFinalMessage {
+                    finalMessageSection
+                        .transition(.scale.combined(with: .opacity))
+                }
                 
                 Spacer()
+            }
+        }
+        .onAppear {
+            startProgressiveDisplay()
+        }
+    }
+    
+    // MARK: - Progressive Display Logic
+    private func startProgressiveDisplay() {
+        // Reset all states
+        showHeader = false
+        showChoicesSummary = false
+        showAnalysis = false
+        showEliminatedPlayers = false
+        showContinuingPlayers = false
+        showFinalMessage = false
+        
+        // Progressive display with haptic feedback
+        
+        // 1. Header (hemen)
+        withAnimation(ResponsiveAnimation.default) {
+            showHeader = true
+        }
+        multipeerManager.playHaptic(style: .light)
+        
+        // 2. Choices Summary (1.5 saniye sonra)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(ResponsiveAnimation.default) {
+                showChoicesSummary = true
+            }
+            multipeerManager.playHaptic(style: .light)
+        }
+        
+        // 3. Analysis (3 saniye sonra)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(ResponsiveAnimation.default) {
+                showAnalysis = true
+            }
+            multipeerManager.playHaptic(style: .medium)
+        }
+        
+        // 4. Eliminated Players (4.5 saniye sonra)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+            withAnimation(ResponsiveAnimation.default) {
+                showEliminatedPlayers = true
+            }
+            if !eliminatedPlayers.isEmpty {
+                multipeerManager.playHaptic(style: .warning)
+            } else {
+                multipeerManager.playHaptic(style: .success)
+            }
+        }
+        
+        // 5. Continuing Players (5.5 saniye sonra)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.5) {
+            withAnimation(ResponsiveAnimation.default) {
+                showContinuingPlayers = true
+            }
+            multipeerManager.playHaptic(style: .light)
+        }
+        
+        // 6. Final Message (6.5 saniye sonra - sadece son tur ise)
+        if isGameEndingSoon {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6.5) {
+                withAnimation(ResponsiveAnimation.default) {
+                    showFinalMessage = true
+                }
+                multipeerManager.playHaptic(style: .heavy)
             }
         }
     }
@@ -65,6 +170,7 @@ struct ResultsView: View {
         VStack(spacing: ResponsiveSpacing.medium) {
             Text("📊")
                 .font(ResponsiveFont.emoji(size: .medium))
+                .scaleEffect(1.2)
             
             Text("Tur \(multipeerManager.gameState.currentRound) Sonuçları")
                 .font(ResponsiveFont.largeTitle)
@@ -74,73 +180,26 @@ struct ResultsView: View {
         }
     }
     
-    // MARK: - Round Analysis Section
-    private var roundAnalysisSection: some View {
-        VStack(spacing: ResponsiveSpacing.medium) {
-            
-            // Seçimleri göster
-            choicesSummaryView
-            
-            // Kazanan/kaybeden analizi
-            if roundAnalysis.hasEliminations,
-               let winningChoice = roundAnalysis.winningChoice,
-               let losingChoice = roundAnalysis.losingChoice {
-                
-                VStack(spacing: ResponsiveSpacing.medium) {
-                    HStack(spacing: ResponsiveSpacing.large) {
-                        // Kazanan
-                        VStack(spacing: ResponsiveSpacing.small) {
-                            Text(getChoiceIcon(winningChoice))
-                                .font(ResponsiveFont.emoji(size: .small))
-                            
-                            Text(winningChoice.rawValue)
-                                .font(ResponsiveFont.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.green)
-                            
-                            Text("KAZANAN")
-                                .font(ResponsiveFont.caption)
-                                .fontWeight(.bold)
-                                .foregroundColor(.green.opacity(0.8))
-                        }
-                        
-                        Text("VS")
-                            .font(ResponsiveFont.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white.opacity(0.6))
-                        
-                        // Kaybeden
-                        VStack(spacing: ResponsiveSpacing.small) {
-                            Text(getChoiceIcon(losingChoice))
-                                .font(ResponsiveFont.emoji(size: .small))
-                                .opacity(0.6)
-                            
-                            Text(losingChoice.rawValue)
-                                .font(ResponsiveFont.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.red)
-                            
-                            Text("KAYBEDEN")
-                                .font(ResponsiveFont.caption)
-                                .fontWeight(.bold)
-                                .foregroundColor(.red.opacity(0.8))
-                        }
-                    }
-                }
-                .padding(.vertical, ResponsiveSpacing.medium)
-                .frame(maxWidth: .infinity)
-                .responsiveCard()
-            }
-        }
-    }
-    
     // MARK: - Choices Summary View
     private var choicesSummaryView: some View {
         VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
-            Text("🎯 Bu Turdaki Seçimler")
-                .font(ResponsiveFont.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
+            HStack {
+                Text("🎯 Bu Turdaki Seçimler")
+                    .font(ResponsiveFont.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Text("\(multipeerManager.gameState.choices.count) oyuncu")
+                    .font(ResponsiveFont.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, ResponsiveSpacing.small)
+                    .padding(.vertical, ResponsiveSpacing.tiny)
+                    .background(Color.white.opacity(0.2))
+                    .clipShape(Capsule())
+            }
             
             choicesGridView
         }
@@ -168,8 +227,103 @@ struct ResultsView: View {
         } ?? []
     }
     
-    // MARK: - Results Section
-    private var resultsSection: some View {
+    // MARK: - Round Analysis Section
+    private var roundAnalysisSection: some View {
+        VStack(spacing: ResponsiveSpacing.medium) {
+            
+            // Kazanan/kaybeden analizi
+            if roundAnalysis.hasEliminations,
+               let winningChoice = roundAnalysis.winningChoice,
+               let losingChoice = roundAnalysis.losingChoice {
+                
+                VStack(spacing: ResponsiveSpacing.medium) {
+                    Text("⚔️ Sonuç Analizi")
+                        .font(ResponsiveFont.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    HStack(spacing: ResponsiveSpacing.large) {
+                        // Kazanan
+                        VStack(spacing: ResponsiveSpacing.small) {
+                            Text(getChoiceIcon(winningChoice))
+                                .font(ResponsiveFont.emoji(size: .small))
+                            
+                            Text(winningChoice.rawValue)
+                                .font(ResponsiveFont.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.green)
+                            
+                            Text("KAZANAN")
+                                .font(ResponsiveFont.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.green.opacity(0.8))
+                        }
+                        .padding(.vertical, ResponsiveSpacing.medium)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                                .fill(Color.green.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                                        .stroke(Color.green.opacity(0.4), lineWidth: 2)
+                                )
+                        )
+                        
+                        Text("⚡️")
+                            .font(ResponsiveFont.title2)
+                            .foregroundColor(.yellow)
+                        
+                        // Kaybeden
+                        VStack(spacing: ResponsiveSpacing.small) {
+                            Text(getChoiceIcon(losingChoice))
+                                .font(ResponsiveFont.emoji(size: .small))
+                                .opacity(0.6)
+                            
+                            Text(losingChoice.rawValue)
+                                .font(ResponsiveFont.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.red)
+                            
+                            Text("KAYBEDEN")
+                                .font(ResponsiveFont.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.red.opacity(0.8))
+                        }
+                        .padding(.vertical, ResponsiveSpacing.medium)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                                .fill(Color.red.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                                        .stroke(Color.red.opacity(0.4), lineWidth: 2)
+                                )
+                        )
+                    }
+                }
+                .responsiveCard()
+                
+            } else {
+                // Beraberlik durumu
+                VStack(spacing: ResponsiveSpacing.medium) {
+                    Text("🤝 Beraberlik!")
+                        .font(ResponsiveFont.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("Bu turda kimse elenmedi")
+                        .font(ResponsiveFont.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(.vertical, ResponsiveSpacing.medium)
+                .frame(maxWidth: .infinity)
+                .responsiveCard(backgroundColor: Color.blue.opacity(0.2), borderColor: Color.blue.opacity(0.4))
+            }
+        }
+    }
+    
+    // MARK: - Elimination Results Section
+    private var eliminationResultsSection: some View {
         VStack(spacing: ResponsiveSpacing.medium) {
             
             if eliminatedPlayers.isEmpty {
@@ -185,11 +339,11 @@ struct ResultsView: View {
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                     
-                    Text("Herkes devam ediyor")
+                    Text("Herkes bir sonraki tura geçiyor")
                         .font(ResponsiveFont.subheadline)
                         .foregroundColor(.white.opacity(0.8))
                 }
-                .padding(.vertical, ResponsiveSpacing.medium)
+                .padding(.vertical, ResponsiveSpacing.extraLarge)
                 .frame(maxWidth: .infinity)
                 .responsiveCard(backgroundColor: Color.green.opacity(0.2), borderColor: Color.green.opacity(0.4))
                 
@@ -226,6 +380,19 @@ struct ResultsView: View {
                             )
                         }
                     }
+                    
+                    if !eliminatedPlayers.isEmpty {
+                        HStack {
+                            Spacer()
+                            Text("Veda! 👋")
+                                .font(ResponsiveFont.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.red.opacity(0.8))
+                                .italic()
+                            Spacer()
+                        }
+                        .padding(.top, ResponsiveSpacing.small)
+                    }
                 }
                 .responsiveCard(backgroundColor: Color.red.opacity(0.2), borderColor: Color.red.opacity(0.4))
             }
@@ -240,7 +407,7 @@ struct ResultsView: View {
                     .font(ResponsiveFont.title2)
                     .foregroundColor(.blue)
                 
-                Text("Yola Devam Edenler")
+                Text("Yarı-Finale Kalan Oyuncular")
                     .font(ResponsiveFont.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
@@ -271,9 +438,65 @@ struct ResultsView: View {
                         )
                     }
                 }
+                
+                // Devam eden oyuncular için motivasyon mesajı
+                if multipeerManager.gameState.activePlayers.count > 1 {
+                    HStack {
+                        Spacer()
+                        Text(motivationalMessage)
+                            .font(ResponsiveFont.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue.opacity(0.9))
+                            .italic()
+                            .multilineTextAlignment(.center)
+                        Spacer()
+                    }
+                    .padding(.top, ResponsiveSpacing.small)
+                }
             }
         }
         .responsiveCard(backgroundColor: Color.blue.opacity(0.2), borderColor: Color.blue.opacity(0.4))
+    }
+    
+    // MARK: - Final Message Section
+    private var finalMessageSection: some View {
+        VStack(spacing: ResponsiveSpacing.medium) {
+            if isGameEndingSoon {
+                VStack(spacing: ResponsiveSpacing.medium) {
+                    Text("🏁")
+                        .font(ResponsiveFont.emoji(size: .medium))
+                    
+                    Text("Turnuva Sona Eriyor!")
+                        .font(ResponsiveFont.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    if multipeerManager.gameState.activePlayers.count == 1 {
+                        Text("Kazanan belirlendi! Final sonuçları gösteriliyor...")
+                    } else {
+                        Text("Turnuva tamamlandı. Sonuçlar hazırlanıyor...")
+                    }
+                }
+                .padding(.vertical, ResponsiveSpacing.large)
+                .frame(maxWidth: .infinity)
+                .responsiveCard(backgroundColor: Color.purple.opacity(0.3), borderColor: Color.purple.opacity(0.5))
+            }
+        }
+    }
+    
+    // MARK: - Helper Properties
+    private var motivationalMessage: String {
+        let remainingCount = multipeerManager.gameState.activePlayers.count
+        switch remainingCount {
+        case 2:
+            return "🔥 Final savaşı yakında! İyi şanslar!"
+        case 3:
+            return "⚔️ Son 3 oyuncu! Hanginiz finale kalacak?"
+        case 4:
+            return "💪 Yarı-final zamanı! Güçlü kalın!"
+        default:
+            return "🌟 Mücadele devam ediyor! Bir sonraki tura hazır olun!"
+        }
     }
     
     // MARK: - Helper Methods
@@ -392,6 +615,7 @@ struct EliminatedPlayerRow: View {
                 
                 Text(player.avatar)
                     .font(.system(size: ResponsiveSize.avatarSmall * 0.7))
+                    .grayscale(0.5) // Slightly desaturated
             }
             
             // Player info
@@ -419,15 +643,27 @@ struct EliminatedPlayerRow: View {
             
             Spacer()
             
-            Image(systemName: "xmark.circle")
-                .font(ResponsiveFont.title3)
-                .foregroundColor(.red.opacity(0.8))
+            // Elimination badge
+            HStack(spacing: ResponsiveSpacing.tiny) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(ResponsiveFont.subheadline)
+                    .foregroundColor(.red)
+                
+                Text("ELENEN")
+                    .font(ResponsiveFont.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.red.opacity(0.8))
+            }
         }
         .padding(.vertical, ResponsiveSpacing.small)
         .padding(.horizontal, ResponsiveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
                 .fill(Color.red.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                )
         )
     }
     
@@ -447,25 +683,39 @@ struct ContinuingPlayerRow: View {
     
     var body: some View {
         VStack(spacing: ResponsiveSpacing.small) {
-            // Avatar
+            // Avatar with victory glow
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.3))
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.blue.opacity(0.4), Color.blue.opacity(0.2)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: ResponsiveSize.avatarSmall, height: ResponsiveSize.avatarSmall)
                     .overlay(
                         Circle()
-                            .stroke(Color.blue.opacity(0.5), lineWidth: 2)
+                            .stroke(Color.blue.opacity(0.6), lineWidth: 2)
                     )
                 
                 Text(player.avatar)
                     .font(.system(size: ResponsiveSize.avatarSmall * 0.7))
+                
+                // Success checkmark
+                Image(systemName: "checkmark.circle.fill")
+                    .font(ResponsiveFont.caption)
+                    .foregroundColor(.green)
+                    .background(Color.white.opacity(0.9))
+                    .clipShape(Circle())
+                    .offset(x: ResponsiveSize.avatarSmall * 0.3, y: ResponsiveSize.avatarSmall * 0.3)
             }
             
             // Player info
             VStack(alignment: .center, spacing: ResponsiveSpacing.tiny) {
                 Text(player.displayName)
                     .font(ResponsiveFont.caption)
-                    .fontWeight(.medium)
+                    .fontWeight(.bold)
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
@@ -476,21 +726,32 @@ struct ContinuingPlayerRow: View {
                         
                         Text(choice.rawValue)
                             .font(ResponsiveFont.caption)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.white.opacity(0.8))
                             .lineLimit(1)
                     }
                 }
                 
-                Image(systemName: "checkmark.circle")
+                Text("DEVAM")
                     .font(ResponsiveFont.caption)
-                    .foregroundColor(.blue.opacity(0.8))
+                    .fontWeight(.bold)
+                    .foregroundColor(.blue.opacity(0.9))
             }
         }
         .padding(.vertical, ResponsiveSpacing.small)
         .padding(.horizontal, ResponsiveSpacing.small)
         .background(
             RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
-                .fill(Color.blue.opacity(0.1))
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.blue.opacity(0.15), Color.blue.opacity(0.05)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
+                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                )
         )
     }
     

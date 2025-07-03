@@ -970,7 +970,7 @@ class MultipeerManager: NSObject, ObservableObject {
         processRoundResults()
     }
     
-    /// Tur sonuçlarını işler ve eleme algoritmasını çalıştırır (Sadece host)
+    /// Tur sonuçlarını işler ve eleme algoritmasını çalıştırır (Sadece host) - GÜNCELLENDİ
     private func processRoundResults() {
         guard isHost else { return }
         
@@ -1014,13 +1014,24 @@ class MultipeerManager: NSObject, ObservableObject {
         // Game state'i senkronize et
         syncGameState()
         
-        // 3 saniye sonra sonraki adıma geç
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+        // GÜNCELLENDİ: Dinamik bekleme süresi - ResultView'da sonuçları anlamak için daha fazla zaman ver
+        let waitTime: Double
+        if continuingPlayers.count <= 1 {
+            // Son tur - GameOver'e geçecek - daha uzun bekle
+            waitTime = 8.0 // 8 saniye bekle (ResultView'da sonuçları görmek için)
+        } else {
+            // Normal tur - devam edecek
+            waitTime = 6.0 // 6 saniye bekle
+        }
+        
+        print("⏱️ \(waitTime) saniye sonra sonraki aşamaya geçilecek")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + waitTime) {
             self.proceedToNextPhase()
         }
     }
     
-    /// Sonraki aşamaya geçer (yeni tur veya oyun sonu) (Sadece host)
+    /// Sonraki aşamaya geçer (yeni tur veya oyun sonu) (Sadece host) - GÜNCELLENDİ
     private func proceedToNextPhase() {
         guard isHost else { return }
         
@@ -1038,7 +1049,7 @@ class MultipeerManager: NSObject, ObservableObject {
             gameState.gamePhase = .geriSayim
             
         } else {
-            // Oyun bitti
+            // Oyun bitti - GameOverView'e geçiş için ekstra bekleme
             print("🏆 Oyun tamamlandı!")
             gameState.gamePhase = .oyunBitti
             

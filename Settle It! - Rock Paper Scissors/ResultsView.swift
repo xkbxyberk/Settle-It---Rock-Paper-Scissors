@@ -51,6 +51,29 @@ struct ResultsView: View {
         return multipeerManager.gameState.activePlayers.count <= 1
     }
     
+    /// Oyuncu sayısına göre uygun başlık belirleme
+    private var continuingPlayersTitle: (icon: String, title: String) {
+        let activeCount = multipeerManager.gameState.activePlayers.count
+        let totalCount = multipeerManager.gameState.players.count
+        
+        switch (activeCount, totalCount) {
+        case (1, 2):
+            return ("👑", "Kazanan")
+        case (1, _):
+            return ("👑", "Büyük Kazanan")
+        case (2, 2):
+            return ("⚔️", "Her İki Oyuncu Devam Ediyor")
+        case (2, _):
+            return ("🔥", "Finale Kalan Oyuncular")
+        case (3, _):
+            return ("⚡️", "Son 3 Oyuncu")
+        case (4, _):
+            return ("💪", "Yarı-Finale Kalan Oyuncular")
+        default:
+            return ("🌟", "Devam Eden Oyuncular")
+        }
+    }
+    
     // MARK: - Body
     var body: some View {
         ResponsiveContainer {
@@ -355,7 +378,7 @@ struct ResultsView: View {
                             .font(ResponsiveFont.title2)
                             .foregroundColor(.red)
                         
-                        Text("Elenen Oyuncular")
+                        Text(eliminatedPlayersTitle)
                             .font(ResponsiveFont.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -384,7 +407,7 @@ struct ResultsView: View {
                     if !eliminatedPlayers.isEmpty {
                         HStack {
                             Spacer()
-                            Text("Veda! 👋")
+                            Text(eliminationMessage)
                                 .font(ResponsiveFont.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.red.opacity(0.8))
@@ -403,11 +426,10 @@ struct ResultsView: View {
     private var continuingPlayersSection: some View {
         VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
             HStack {
-                Image(systemName: "arrow.forward.circle.fill")
+                Text(continuingPlayersTitle.icon)
                     .font(ResponsiveFont.title2)
-                    .foregroundColor(.blue)
                 
-                Text("Yarı-Finale Kalan Oyuncular")
+                Text(continuingPlayersTitle.title)
                     .font(ResponsiveFont.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
@@ -440,7 +462,7 @@ struct ResultsView: View {
                 }
                 
                 // Devam eden oyuncular için motivasyon mesajı
-                if multipeerManager.gameState.activePlayers.count > 1 {
+                if shouldShowMotivationalMessage {
                     HStack {
                         Spacer()
                         Text(motivationalMessage)
@@ -485,11 +507,57 @@ struct ResultsView: View {
     }
     
     // MARK: - Helper Properties
+    private var eliminatedPlayersTitle: String {
+        let totalCount = multipeerManager.gameState.players.count
+        let eliminatedCount = eliminatedPlayers.count
+        
+        if totalCount == 2 {
+            return "Kaybeden Oyuncu"
+        } else if eliminatedCount == 1 {
+            return "Elenen Oyuncu"
+        } else {
+            return "Elenen Oyuncular"
+        }
+    }
+    
+    private var eliminationMessage: String {
+        let totalCount = multipeerManager.gameState.players.count
+        
+        if totalCount == 2 {
+            return "Turda kaybetti! 😔"
+        } else {
+            return "Veda! 👋"
+        }
+    }
+    
+    private var shouldShowMotivationalMessage: Bool {
+        let remainingCount = multipeerManager.gameState.activePlayers.count
+        let totalCount = multipeerManager.gameState.players.count
+        
+        // 2 kişi oynarken ve her ikisi de devam ediyorsa mesaj gösterme
+        if totalCount == 2 && remainingCount == 2 {
+            return false
+        }
+        
+        // 1 kişi kaldıysa (kazandıysa) mesaj gösterme
+        if remainingCount <= 1 {
+            return false
+        }
+        
+        return true
+    }
+    
     private var motivationalMessage: String {
         let remainingCount = multipeerManager.gameState.activePlayers.count
+        let totalCount = multipeerManager.gameState.players.count
+        
         switch remainingCount {
         case 2:
-            return "🔥 Final savaşı yakında! İyi şanslar!"
+            if totalCount == 2 {
+                return "🤝 İki oyuncu da devam ediyor! Bir sonraki turda kazanan belli olacak!"
+            } else {
+                return "🔥 Final savaşı yakında! İyi şanslar!"
+            }
         case 3:
             return "⚔️ Son 3 oyuncu! Hanginiz finale kalacak?"
         case 4:

@@ -284,8 +284,8 @@ struct LobbyView: View {
                 // Boş durum
                 emptyPlayersView
             } else {
-                // Oyuncular var
-                playersListView
+                // Oyuncular var - GameOverView benzeri tasarım
+                playersScrollListView
             }
         }
         .responsiveCard()
@@ -311,17 +311,22 @@ struct LobbyView: View {
         .padding(.vertical, ResponsiveSpacing.medium)
     }
     
-    // MARK: - Players List View
-    private var playersListView: some View {
-        LazyVGrid(columns: ResponsiveGrid.playerColumns, spacing: ResponsiveSpacing.medium) {
-            ForEach(multipeerManager.gameState.players, id: \.id) { player in
-                PlayerRowView(
-                    player: player,
-                    isHost: player.deviceID == multipeerManager.gameState.hostDeviceID,
-                    isCurrentUser: player.deviceID == multipeerManager.getCurrentUserDeviceID()
-                )
+    // MARK: - Players Scroll List View - GameOverView benzeri tasarım
+    private var playersScrollListView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: ResponsiveSpacing.small) {
+                ForEach(Array(multipeerManager.gameState.players.enumerated()), id: \.element.id) { index, player in
+                    LobbyPlayerRow(
+                        position: index + 1,
+                        player: player,
+                        isHost: player.deviceID == multipeerManager.gameState.hostDeviceID,
+                        isCurrentUser: player.deviceID == multipeerManager.getCurrentUserDeviceID()
+                    )
+                }
             }
+            .padding(.vertical, ResponsiveSpacing.small)
         }
+        .frame(maxHeight: 280) // Maksimum yükseklik - yaklaşık 4-5 oyuncu gösterimi
     }
     
     // MARK: - Start Game Section
@@ -391,50 +396,58 @@ struct LobbyView: View {
     }
 }
 
-// MARK: - Player Row View
-struct PlayerRowView: View {
+// MARK: - Lobby Player Row - GameOverView.PlayerStandingRow benzeri tasarım
+struct LobbyPlayerRow: View {
+    let position: Int
     let player: Player
     let isHost: Bool
     let isCurrentUser: Bool
     
     var body: some View {
-        VStack(spacing: ResponsiveSpacing.small) {
-            // Oyuncu avatarı
+        HStack(spacing: ResponsiveSpacing.medium) {
+            // Position/Status circle
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                isCurrentUser ? Color.blue.opacity(0.4) : Color.white.opacity(0.3),
-                                isCurrentUser ? Color.blue.opacity(0.2) : Color.white.opacity(0.1)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: ResponsiveSize.avatarMedium, height: ResponsiveSize.avatarMedium)
+                    .fill(statusColor.opacity(0.3))
+                    .frame(width: ResponsiveSize.avatarSmall * 0.8, height: ResponsiveSize.avatarSmall * 0.8)
                     .overlay(
                         Circle()
-                            .stroke(isCurrentUser ? Color.blue : Color.white.opacity(0.5), lineWidth: 2)
+                            .stroke(statusColor, lineWidth: 2)
                     )
                 
-                Text(player.avatar)
-                    .font(ResponsiveFont.emoji(size: .small))
-                
-                // Host crown
                 if isHost {
-                    Text("👑")
+                    Image(systemName: "crown.fill")
                         .font(ResponsiveFont.subheadline)
-                        .offset(x: ResponsiveSize.avatarMedium * 0.25, y: -ResponsiveSize.avatarMedium * 0.25)
+                        .fontWeight(.bold)
+                        .foregroundColor(statusColor)
+                } else {
+                    Text("\(position)")
+                        .font(ResponsiveFont.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(statusColor)
                 }
             }
             
-            // Oyuncu bilgileri
-            VStack(alignment: .center, spacing: ResponsiveSpacing.tiny) {
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: ResponsiveSize.avatarSmall, height: ResponsiveSize.avatarSmall)
+                    .overlay(
+                        Circle()
+                            .stroke(isCurrentUser ? Color.blue.opacity(0.6) : Color.white.opacity(0.3), lineWidth: isCurrentUser ? 2 : 1)
+                    )
+                
+                Text(player.avatar)
+                    .font(.system(size: ResponsiveSize.avatarSmall * 0.7))
+            }
+            
+            // Player info
+            VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
                 HStack(spacing: ResponsiveSpacing.tiny) {
                     Text(player.displayName)
                         .font(ResponsiveFont.subheadline)
-                        .fontWeight(.bold)
+                        .fontWeight(.semibold)
                         .foregroundColor(.white)
                         .lineLimit(1)
                     
@@ -452,44 +465,72 @@ struct PlayerRowView: View {
                     }
                 }
                 
-                HStack(spacing: ResponsiveSpacing.tiny) {
-                    Image(systemName: isHost ? "crown.fill" : "checkmark.circle.fill")
-                        .font(ResponsiveFont.caption)
-                        .foregroundColor(isHost ? .yellow : .green.opacity(0.8))
-                    
-                    Text(isHost ? "Oda Host'u" : "Hazır")
-                        .font(ResponsiveFont.caption)
-                        .foregroundColor(isHost ? .yellow.opacity(0.9) : .green.opacity(0.8))
-                }
-                
+                Text(isHost ? "Oda Host'u" : "Hazır")
+                    .font(ResponsiveFont.caption)
+                    .foregroundColor(isHost ? .yellow.opacity(0.9) : .green.opacity(0.8))
+            }
+            
+            Spacer()
+            
+            // Status icon
+            HStack(spacing: ResponsiveSpacing.small) {
                 // Bağlantı durumu
                 Image(systemName: "wifi.circle.fill")
                     .font(ResponsiveFont.subheadline)
                     .foregroundColor(.green.opacity(0.8))
+                
+                // Host crown veya ready checkmark
+                if isHost {
+                    Text("👑")
+                        .font(ResponsiveFont.title3)
+                } else {
+                    Image(systemName: "checkmark.circle")
+                        .font(ResponsiveFont.subheadline)
+                        .foregroundColor(.green.opacity(0.8))
+                }
             }
         }
         .padding(.vertical, ResponsiveSpacing.small)
-        .padding(.horizontal, ResponsiveSpacing.small)
+        .padding(.horizontal, ResponsiveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            isCurrentUser ? Color.blue.opacity(0.2) : Color.white.opacity(0.1),
-                            isCurrentUser ? Color.blue.opacity(0.1) : Color.white.opacity(0.05)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(backgroundFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ResponsiveSize.cardCornerRadius)
-                        .stroke(
-                            isCurrentUser ? Color.blue.opacity(0.3) : Color.white.opacity(0.2),
-                            lineWidth: 1
-                        )
+                        .stroke(borderStroke, lineWidth: 1)
                 )
         )
+    }
+    
+    // MARK: - Helper Properties
+    private var statusColor: Color {
+        if isHost {
+            return .yellow
+        } else if isCurrentUser {
+            return .blue
+        } else {
+            return .white.opacity(0.6)
+        }
+    }
+    
+    private var backgroundFill: Color {
+        if isHost {
+            return Color.yellow.opacity(0.15)
+        } else if isCurrentUser {
+            return Color.blue.opacity(0.15)
+        } else {
+            return Color.white.opacity(0.05)
+        }
+    }
+    
+    private var borderStroke: Color {
+        if isHost {
+            return Color.yellow.opacity(0.3)
+        } else if isCurrentUser {
+            return Color.blue.opacity(0.3)
+        } else {
+            return Color.white.opacity(0.1)
+        }
     }
 }
 

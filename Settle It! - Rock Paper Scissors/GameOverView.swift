@@ -186,7 +186,7 @@ struct GameOverView: View {
         }
     }
     
-    // MARK: - Final Standings Section
+    // MARK: - Final Standings Section - DÜZELTİLDİ
     private var finalStandingsSection: some View {
         VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
             Text("🏅 Final Sıralaması")
@@ -204,9 +204,10 @@ struct GameOverView: View {
                     )
                 }
                 
-                // Diğer oyuncular (son elemeler)
+                // Diğer oyuncular (kazanan hariç - deviceID ile güvenli kontrol)
                 let otherPlayers = multipeerManager.gameState.players.filter { player in
-                    winner?.id != player.id
+                    guard let winner = winner else { return true }
+                    return winner.deviceID != player.deviceID
                 }
                 
                 ForEach(Array(otherPlayers.enumerated()), id: \.element.id) { index, player in

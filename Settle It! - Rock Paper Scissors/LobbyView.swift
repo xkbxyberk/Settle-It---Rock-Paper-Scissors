@@ -38,6 +38,9 @@ struct LobbyView: View {
                 if currentRoom != nil {
                     roomInfoSection
                     playersListSection
+                    if isHost {
+                        tournamentSettingsSection
+                    }
                     startGameSection
                 } else {
                     noRoomSection
@@ -327,6 +330,176 @@ struct LobbyView: View {
             .padding(.vertical, ResponsiveSpacing.small)
         }
         .frame(maxHeight: 280) // Maksimum yükseklik - yaklaşık 4-5 oyuncu gösterimi
+    }
+    
+    // MARK: - Tournament Settings Section (Host Only)
+    private var tournamentSettingsSection: some View {
+        VStack(alignment: .leading, spacing: ResponsiveSpacing.medium) {
+            HStack {
+                Text("🏆 Turnuva Ayarları")
+                    .font(ResponsiveFont.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Text("HOST")
+                    .font(ResponsiveFont.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.yellow)
+                    .padding(.horizontal, ResponsiveSpacing.small)
+                    .padding(.vertical, ResponsiveSpacing.tiny)
+                    .background(Color.yellow.opacity(0.2))
+                    .clipShape(Capsule())
+            }
+            
+            VStack(spacing: ResponsiveSpacing.medium) {
+                // Eleme Tur Sayısı
+                HStack {
+                    VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
+                        Text("Eleme Tur Sayısı")
+                            .font(ResponsiveFont.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        
+                        Text("Finale kalacak 2 oyuncuyu belirlemek için")
+                            .font(ResponsiveFont.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: ResponsiveSpacing.small) {
+                        Button("-") {
+                            if multipeerManager.settings.eliminationRoundsCount > 1 {
+                                multipeerManager.settings.eliminationRoundsCount -= 1
+                            }
+                            multipeerManager.playHaptic(style: .light)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, ResponsiveSpacing.medium)
+                        .padding(.vertical, ResponsiveSpacing.small)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                        
+                        Text("\(multipeerManager.settings.eliminationRoundsCount)")
+                            .font(ResponsiveFont.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(minWidth: 30)
+                        
+                        Button("+") {
+                            if multipeerManager.settings.eliminationRoundsCount < 10 {
+                                multipeerManager.settings.eliminationRoundsCount += 1
+                            }
+                            multipeerManager.playHaptic(style: .light)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, ResponsiveSpacing.medium)
+                        .padding(.vertical, ResponsiveSpacing.small)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                    }
+                }
+                
+                // Final Tur Sayısı
+                HStack {
+                    VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
+                        Text("Final Tur Sayısı")
+                            .font(ResponsiveFont.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        
+                        Text("2 finalist arasındaki final maçı")
+                            .font(ResponsiveFont.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: ResponsiveSpacing.small) {
+                        Button("-") {
+                            if multipeerManager.settings.finalRoundsCount > 1 {
+                                multipeerManager.settings.finalRoundsCount -= 1
+                            }
+                            multipeerManager.playHaptic(style: .light)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, ResponsiveSpacing.medium)
+                        .padding(.vertical, ResponsiveSpacing.small)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                        
+                        Text("\(multipeerManager.settings.finalRoundsCount)")
+                            .font(ResponsiveFont.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(minWidth: 30)
+                        
+                        Button("+") {
+                            if multipeerManager.settings.finalRoundsCount < 10 {
+                                multipeerManager.settings.finalRoundsCount += 1
+                            }
+                            multipeerManager.playHaptic(style: .light)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, ResponsiveSpacing.medium)
+                        .padding(.vertical, ResponsiveSpacing.small)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                    }
+                }
+                
+                // Düello Galibiyet Sayısı
+                HStack {
+                    VStack(alignment: .leading, spacing: ResponsiveSpacing.tiny) {
+                        Text("Düello Galibiyet Sayısı")
+                            .font(ResponsiveFont.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        
+                        Text("2 oyuncu varsa kazanmak için gerekli")
+                            .font(ResponsiveFont.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: ResponsiveSpacing.small) {
+                        Button("-") {
+                            if multipeerManager.settings.duelWinCount > 1 {
+                                multipeerManager.settings.duelWinCount -= 1
+                            }
+                            multipeerManager.playHaptic(style: .light)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, ResponsiveSpacing.medium)
+                        .padding(.vertical, ResponsiveSpacing.small)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                        
+                        Text("\(multipeerManager.settings.duelWinCount)")
+                            .font(ResponsiveFont.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(minWidth: 30)
+                        
+                        Button("+") {
+                            if multipeerManager.settings.duelWinCount < 10 {
+                                multipeerManager.settings.duelWinCount += 1
+                            }
+                            multipeerManager.playHaptic(style: .light)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, ResponsiveSpacing.medium)
+                        .padding(.vertical, ResponsiveSpacing.small)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+        }
+        .responsiveCard(backgroundColor: Color.yellow.opacity(0.15), borderColor: Color.yellow.opacity(0.3))
     }
     
     // MARK: - Start Game Section

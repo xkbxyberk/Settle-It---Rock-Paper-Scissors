@@ -203,6 +203,40 @@ struct SettingsView: View {
                     .pickerStyle(MenuPickerStyle())
                     .foregroundColor(.blue)
                 }
+                
+                // Tournament Settings Divider
+                Divider()
+                    .background(Color.white.opacity(0.3))
+
+                // Elimination Rounds
+                SettingRow(
+                    icon: "trophy",
+                    title: "Eleme Tur Sayısı",
+                    subtitle: "\(multipeerManager.settings.eliminationRoundsCount) tur"
+                ) {
+                    Stepper("", value: $multipeerManager.settings.eliminationRoundsCount, in: 1...10)
+                        .labelsHidden()
+                }
+
+                // Final Rounds
+                SettingRow(
+                    icon: "crown",
+                    title: "Final Tur Sayısı",
+                    subtitle: "\(multipeerManager.settings.finalRoundsCount) tur"
+                ) {
+                    Stepper("", value: $multipeerManager.settings.finalRoundsCount, in: 1...10)
+                        .labelsHidden()
+                }
+
+                // Duel Win Target
+                SettingRow(
+                    icon: "target",
+                    title: "Düello Galibiyet Hedefi",
+                    subtitle: "\(multipeerManager.settings.duelWinCount) galibiyet"
+                ) {
+                    Stepper("", value: $multipeerManager.settings.duelWinCount, in: 1...10)
+                        .labelsHidden()
+                }
             }
         }
     }

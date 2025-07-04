@@ -503,6 +503,7 @@ struct GameOverView: View {
         switch multipeerManager.gameState.gameMode {
         case .dokunma: return "👆"
         case .sallama: return "📱"
+        case .asamaliTurnuva: return "🏆"
         case .none: return "❓"
         }
     }

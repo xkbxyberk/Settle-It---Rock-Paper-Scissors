@@ -83,6 +83,17 @@ struct GameState: Codable, Equatable {
     
     // Tekrar oyna sistemi - YENİ
     var playAgainRequests: [String: Bool] = [:] // DeviceID: Response (true/false)
+    var tournamentPhase: TournamentPhase = .none // Turnuvanın hangi aşamasında
+    var eliminationRounds: Int = 3 // Eleme tur sayısı
+    var finalRounds: Int = 3 // Final tur sayısı
+    var duelWinTarget: Int = 3 // Düello modunda kazanmak için gereken galibiyet
+    var playerScores: [String: Int] = [:] // Oyuncu puanları (DeviceID: Skor)
+    var currentElimRound: Int = 0 // Mevcut eleme turu
+    var currentFinalRound: Int = 0 // Mevcut final turu
+    var finalists: [Player] = [] // Finale kalan oyuncular
+    var spectators: [Player] = [] // İzleyici olan oyuncular
+    var tournamentWinner: Player? // Turnuva kazananı
+    var duelScores: [String: Int] = [:] // Düello modu skorları
     var isWaitingForPlayAgainResponses: Bool = false
 }
 
@@ -95,6 +106,10 @@ enum GamePhase: Codable, Equatable {
     case turOynaniyor // Oyuncuların seçim yaptığı aşama
     case sonucGosteriliyor // Tur sonuçlarının gösterildiği aşama
     case oyunBitti // Oyun tamamlandığında
+    case elemeAsamasi // Aşamalı turnuvanın eleme aşaması
+    case finalAsamasi // Aşamalı turnuvanın final aşaması
+    case izleyiciModu // Elenen oyuncular için izleyici modu
+    case duelModu // İki oyunculu düello modu
 }
 
 // MARK: - Game Mode
@@ -102,6 +117,7 @@ enum GamePhase: Codable, Equatable {
 enum GameMode: String, Codable {
     case dokunma = "Dokunarak Seç" // Ekrana dokunarak seçim yapma modu
     case sallama = "Sallayarak Oyna" // Cihazı sallayarak seçim yapma modu
+    case asamaliTurnuva = "Aşamalı Turnuva"
 }
 
 // MARK: - Choice
@@ -299,6 +315,23 @@ struct UserProfile: Codable, Equatable {
     }
 }
 
+// MARK: - Tournament Phase
+/// Aşamalı turnuvanın hangi aşamada olduğunu belirten enum
+enum TournamentPhase: Codable, Equatable {
+    case none // Aşamalı turnuva modu değil
+    case elimination // Eleme aşaması
+    case final // Final aşaması
+    case spectating // İzleyici modu
+    case duel // Düello modu
+}
+
+// MARK: - Spectator Action
+/// İzleyici oyuncuların seçebileceği aksiyonlar
+enum SpectatorAction: Codable, Equatable {
+    case watch // Oyunu izlemeye devam et
+    case leave // Oyundan ayrıl
+}
+
 // MARK: - Game Settings
 /// Oyun ayarlarını tutan yapı
 struct GameSettings: Codable, Equatable {
@@ -310,6 +343,9 @@ struct GameSettings: Codable, Equatable {
     var soundEffects: Bool = true
     var hapticFeedback: Bool = true
     var animations: Bool = true
+    var eliminationRoundsCount: Int = 3 // Eleme turu sayısı (1-10)
+    var finalRoundsCount: Int = 3 // Final turu sayısı (1-10)
+    var duelWinCount: Int = 3 // Düello modunda kazanmak için gereken galibiyet (1-10)
     
     // UserDefaults keys
     private enum Keys {
@@ -321,6 +357,9 @@ struct GameSettings: Codable, Equatable {
         static let soundEffects = "soundEffects"
         static let hapticFeedback = "hapticFeedback"
         static let animations = "animations"
+        static let eliminationRoundsCount = "eliminationRoundsCount"
+        static let finalRoundsCount = "finalRoundsCount"
+        static let duelWinCount = "duelWinCount"
     }
     
     // Load from UserDefaults
@@ -360,6 +399,17 @@ struct GameSettings: Codable, Equatable {
         if UserDefaults.standard.object(forKey: Keys.animations) != nil {
             settings.animations = UserDefaults.standard.bool(forKey: Keys.animations)
         }
+        if UserDefaults.standard.object(forKey: Keys.eliminationRoundsCount) != nil {
+            settings.eliminationRoundsCount = UserDefaults.standard.integer(forKey: Keys.eliminationRoundsCount)
+        }
+
+        if UserDefaults.standard.object(forKey: Keys.finalRoundsCount) != nil {
+            settings.finalRoundsCount = UserDefaults.standard.integer(forKey: Keys.finalRoundsCount)
+        }
+
+        if UserDefaults.standard.object(forKey: Keys.duelWinCount) != nil {
+            settings.duelWinCount = UserDefaults.standard.integer(forKey: Keys.duelWinCount)
+        }
         
         return settings
     }
@@ -384,6 +434,9 @@ struct GameSettings: Codable, Equatable {
         UserDefaults.standard.set(soundEffects, forKey: Keys.soundEffects)
         UserDefaults.standard.set(hapticFeedback, forKey: Keys.hapticFeedback)
         UserDefaults.standard.set(animations, forKey: Keys.animations)
+        UserDefaults.standard.set(eliminationRoundsCount, forKey: Keys.eliminationRoundsCount)
+        UserDefaults.standard.set(finalRoundsCount, forKey: Keys.finalRoundsCount)
+        UserDefaults.standard.set(duelWinCount, forKey: Keys.duelWinCount)
     }
     
     // Reset to defaults

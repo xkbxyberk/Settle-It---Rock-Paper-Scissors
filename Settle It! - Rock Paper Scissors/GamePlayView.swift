@@ -232,6 +232,12 @@ struct GamePlayView: View {
             
         case .sallama:
             shakeModeView
+            
+        case .asamaliTurnuva:
+            // Aşamalı turnuvada da alt mod belirlenmesi gerekiyor
+            // Şimdilik varsayılan olarak dokunma modunu göster
+            // Gerçek implementasyonda host ayarlarından veya ikinci oylamadan gelecek
+            touchModeView
         }
     }
     

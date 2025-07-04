@@ -570,6 +570,9 @@ class MultipeerManager: NSObject, ObservableObject {
         guard isHost else { return }
         
         let hostSettings = HostGameSettings(from: settings)
+        gameState.eliminationRounds = settings.eliminationRoundsCount
+        gameState.finalRounds = settings.finalRoundsCount
+        gameState.duelWinTarget = settings.duelWinCount
         let message = NetworkMessage.gameSettings(settings: hostSettings)
         send(message: message)
         
@@ -758,6 +761,16 @@ class MultipeerManager: NSObject, ObservableObject {
                 print("📤 Tekrar oyna yanıtı gönderildi: \(deviceID) - \(accepted)")
             case .restartTournament:
                 print("📤 Turnuva yeniden başlatma komutu gönderildi")
+            case .startTournamentStage(let stage):
+                print("📤 Turnuva aşaması başlatma komutu gönderildi: \(stage)")
+            case .updateTournamentScores(let scores):
+                print("📤 Turnuva skorları gönderildi: \(scores.count) oyuncu")
+            case .spectatorAction(let deviceID, let action):
+                print("📤 İzleyici aksiyonu gönderildi: \(deviceID) - \(action)")
+            case .tournamentWinner(let winner):
+                print("📤 Turnuva kazananı bildirimi gönderildi: \(winner.displayName)")
+            case .duelRoundWin(let deviceID):
+                print("📤 Düello tur kazanma bildirimi gönderildi: \(deviceID)")
             }
         } catch {
             print("❌ Mesaj gönderme hatası: \(error.localizedDescription)")
@@ -788,7 +801,13 @@ class MultipeerManager: NSObject, ObservableObject {
         if let preferredMode = settings.preferredGameMode {
             print("🎯 Tercih edilen mod kullanılıyor: \(preferredMode.rawValue)")
             gameState.gameMode = preferredMode
-            gameState.gamePhase = .geriSayim
+            
+            // Mod türüne göre oyun aşaması belirle
+            if preferredMode == .asamaliTurnuva {
+                setupTournamentMode()
+            } else {
+                gameState.gamePhase = .geriSayim
+            }
         } else {
             print("🗳️ Oylama aşamasına geçiliyor")
             gameState.gamePhase = .oylama
@@ -885,11 +904,17 @@ class MultipeerManager: NSObject, ObservableObject {
         
         // Sonuçları uygula
         gameState.gameMode = winningMode
-        gameState.gamePhase = .geriSayim
-        
+
+        // Mod türüne göre sonraki aşamayı belirle
+        if winningMode == .asamaliTurnuva {
+            setupTournamentMode()
+        } else {
+            gameState.gamePhase = .geriSayim
+        }
+
         // Oylama tamamlanma haptic feedback
         playHaptic(style: .success)
-        
+
         print("🏆 Kazanan mod: \(winningMode.rawValue)")
         print("⏰ Geri sayım aşamasına geçildi")
         
@@ -967,7 +992,11 @@ class MultipeerManager: NSObject, ObservableObject {
         print("✅ Tur tamamlandı - Sonuçlar hesaplanıyor")
         
         // Tur sonuçlarını işle ve elemeleri hesapla
-        processRoundResults()
+        if gameState.gameMode == .asamaliTurnuva && gameState.tournamentPhase != .none {
+            checkTournamentRoundCompletion()
+        } else {
+            processRoundResults()
+        }
     }
     
     /// Tur sonuçlarını işler ve eleme algoritmasını çalıştırır (Sadece host) - GÜNCELLENDİ
@@ -1245,6 +1274,23 @@ class MultipeerManager: NSObject, ObservableObject {
             print("🛑 Motion detection durduruluyor (GameState değişikliği)")
             stopMotionDetection()
         }
+        
+        // Aşamalı turnuva motion detection kontrolü
+        let shouldHaveMotionForTournament = (
+            (newState.gamePhase == .turOynaniyor && newState.gameMode == .sallama) ||
+            ((newState.tournamentPhase == .elimination || newState.tournamentPhase == .final || newState.tournamentPhase == .duel) &&
+             newState.gamePhase == .turOynaniyor && newState.gameMode == .sallama)
+        )
+
+        if shouldHaveMotionForTournament && !currentlyHasMotionDetection {
+            print("🎯 Tournament motion detection başlatılıyor")
+            startMotionDetection()
+        }
+
+        if !shouldHaveMotionForTournament && currentlyHasMotionDetection {
+            print("🛑 Tournament motion detection durduruluyor")
+            stopMotionDetection()
+        }
     }
     
     /// PeerID'den Player nesnesi bulur
@@ -1267,6 +1313,314 @@ class MultipeerManager: NSObject, ObservableObject {
         gameState.choices.removeValue(forKey: deviceID)
         
         print("🚫 Oyuncu kaldırıldı: \(deviceID)")
+    }
+    
+    // MARK: - Tournament Management Methods
+
+    /// Aşamalı turnuva modunu kurar
+    private func setupTournamentMode() {
+        print("🏆 Aşamalı Turnuva modu kuruluyor")
+        
+        // Alt mod belirleme - host ayarlarından veya varsayılan
+        let subMode: GameMode = settings.preferredGameMode ?? .dokunma
+        print("🎯 Alt oyun modu: \(subMode.rawValue)")
+        
+        // Ana game mode'u alt mod olarak güncelle (UI için)
+        gameState.gameMode = subMode
+        
+        // Oyuncu sayısına göre turnuva tipini belirle
+        let playerCount = gameState.players.count
+        
+        if playerCount == 2 {
+            // Düello modu
+            setupDuelMode()
+        } else if playerCount > 2 {
+            // Turnuva modu (eleme + final)
+            setupEliminationMode()
+        } else {
+            print("⚠️ Yetersiz oyuncu sayısı: \(playerCount)")
+            gameState.gamePhase = .lobi
+            return
+        }
+        
+        syncGameState()
+    }
+
+    /// Düello modunu kurar (2 oyuncu)
+    private func setupDuelMode() {
+        print("⚔️ Düello modu kuruluyor")
+        
+        gameState.tournamentPhase = .duel
+        gameState.gamePhase = .geriSayim
+        gameState.duelWinTarget = settings.duelWinCount
+        
+        // Düello skorlarını sıfırla
+        gameState.duelScores.removeAll()
+        for player in gameState.players {
+            gameState.duelScores[player.deviceID] = 0
+        }
+        
+        print("🎯 Düello hedef: \(gameState.duelWinTarget) galibiyet")
+    }
+
+    /// Eleme modunu kurar (2+ oyuncu)
+    private func setupEliminationMode() {
+        print("🏆 Eleme modu kuruluyor")
+        
+        gameState.tournamentPhase = .elimination
+        gameState.gamePhase = .geriSayim
+        gameState.eliminationRounds = settings.eliminationRoundsCount
+        gameState.finalRounds = settings.finalRoundsCount
+        gameState.currentElimRound = 0
+        gameState.currentFinalRound = 0
+        
+        // Tüm oyuncuların skorlarını sıfırla
+        gameState.playerScores.removeAll()
+        for player in gameState.players {
+            gameState.playerScores[player.deviceID] = 0
+        }
+        
+        // Finalistleri ve izleyicileri temizle
+        gameState.finalists.removeAll()
+        gameState.spectators.removeAll()
+        
+        print("🎯 Eleme tur sayısı: \(gameState.eliminationRounds)")
+        print("🎯 Final tur sayısı: \(gameState.finalRounds)")
+    }
+
+    /// Turnuva turunu işler (host için)
+    private func processTournamentRound() {
+        guard isHost else { return }
+        
+        switch gameState.tournamentPhase {
+        case .duel:
+            processDuelRound()
+        case .elimination:
+            processEliminationRound()
+        case .final:
+            processFinalRound()
+        default:
+            break
+        }
+    }
+
+    /// Düello turunu işler
+    private func processDuelRound() {
+        print("⚔️ Düello turu işleniyor")
+        
+        // Seçimleri analiz et
+        let choices = gameState.choices
+        let uniqueChoices = Set(choices.values)
+        
+        if uniqueChoices.count == 2 {
+            // Kazanan belirle
+            let choicesArray = Array(uniqueChoices)
+            let winningChoice = determineWinner(choice1: choicesArray[0], choice2: choicesArray[1])
+            
+            // Kazanan oyuncuya puan ver
+            for (deviceID, choice) in choices {
+                if choice == winningChoice {
+                    gameState.duelScores[deviceID, default: 0] += 1
+                    print("🏆 \(deviceID) düello turu kazandı! Skor: \(gameState.duelScores[deviceID] ?? 0)")
+                }
+            }
+            
+            // Kazananı kontrol et
+            let targetScore = gameState.duelWinTarget
+            let winner = gameState.duelScores.first { $0.value >= targetScore }
+            
+            if let winnerEntry = winner,
+               let winnerPlayer = gameState.players.first(where: { $0.deviceID == winnerEntry.key }) {
+                // Düello bitti
+                gameState.tournamentWinner = winnerPlayer
+                gameState.gamePhase = .oyunBitti
+                print("🥇 Düello kazananı: \(winnerPlayer.displayName)")
+            } else {
+                // Yeni tur
+                gameState.choices.removeAll()
+                gameState.gamePhase = .geriSayim
+            }
+        } else {
+            // Beraberlik - yeni tur
+            gameState.choices.removeAll()
+            gameState.gamePhase = .geriSayim
+        }
+        
+        syncGameState()
+    }
+
+    /// Eleme turunu işler
+    private func processEliminationRound() {
+        print("🏆 Eleme turu işleniyor")
+        
+        // Mevcut turu ilerlet
+        gameState.currentElimRound += 1
+        
+        // Seçimleri analiz et ve puan ver
+        let choices = gameState.choices
+        let uniqueChoices = Set(choices.values)
+        
+        if uniqueChoices.count == 2 {
+            // Kazanan belirle
+            let choicesArray = Array(uniqueChoices)
+            let winningChoice = determineWinner(choice1: choicesArray[0], choice2: choicesArray[1])
+            
+            // Kazanan oyunculara puan ver
+            for (deviceID, choice) in choices {
+                if choice == winningChoice {
+                    gameState.playerScores[deviceID, default: 0] += 1
+                    print("🏆 \(deviceID) eleme turu kazandı! Skor: \(gameState.playerScores[deviceID] ?? 0)")
+                }
+            }
+        }
+        
+        // Eleme aşaması bitti mi kontrol et
+        if gameState.currentElimRound >= gameState.eliminationRounds {
+            // Finale kalan 2 oyuncuyu belirle
+            let sortedScores = gameState.playerScores.sorted { $0.value > $1.value }
+            let topTwoDeviceIDs = Array(sortedScores.prefix(2).map { $0.key })
+            
+            gameState.finalists = topTwoDeviceIDs.compactMap { deviceID in
+                gameState.players.first { $0.deviceID == deviceID }
+            }
+            
+            // İzleyicileri belirle
+            gameState.spectators = gameState.players.filter { player in
+                !topTwoDeviceIDs.contains(player.deviceID)
+            }
+            
+            print("🎯 Finalistler: \(gameState.finalists.map { $0.displayName })")
+            print("👀 İzleyiciler: \(gameState.spectators.map { $0.displayName })")
+            
+            // Final aşamasına geç
+            setupFinalPhase()
+        } else {
+            // Yeni eleme turu
+            gameState.choices.removeAll()
+            gameState.gamePhase = .geriSayim
+        }
+        
+        syncGameState()
+    }
+
+    /// Final aşamasını kurar
+    private func setupFinalPhase() {
+        print("🥇 Final aşaması kuruluyor")
+        
+        gameState.tournamentPhase = .final
+        gameState.currentFinalRound = 0
+        
+        // Final skorlarını sıfırla
+        for finalist in gameState.finalists {
+            gameState.playerScores[finalist.deviceID] = 0
+        }
+        
+        // İzleyiciler artık izleyici modunda olacak
+        // (İzleyici modu TournamentStageView'da otomatik olarak handle edilir)
+        print("👀 İzleyici sayısı: \(gameState.spectators.count)")
+        
+        gameState.choices.removeAll()
+        gameState.gamePhase = .geriSayim
+    }
+
+    /// Final turunu işler
+    private func processFinalRound() {
+        print("🥇 Final turu işleniyor")
+        
+        // Mevcut turu ilerlet
+        gameState.currentFinalRound += 1
+        
+        // Sadece finalistlerin seçimlerini analiz et
+        let finalistDeviceIDs = Set(gameState.finalists.map { $0.deviceID })
+        let finalistChoices = gameState.choices.filter { finalistDeviceIDs.contains($0.key) }
+        
+        let uniqueChoices = Set(finalistChoices.values)
+        
+        if uniqueChoices.count == 2 {
+            // Kazanan belirle
+            let choicesArray = Array(uniqueChoices)
+            let winningChoice = determineWinner(choice1: choicesArray[0], choice2: choicesArray[1])
+            
+            // Kazanan finalist'e puan ver
+            for (deviceID, choice) in finalistChoices {
+                if choice == winningChoice {
+                    gameState.playerScores[deviceID, default: 0] += 1
+                    print("🏆 \(deviceID) final turu kazandı! Skor: \(gameState.playerScores[deviceID] ?? 0)")
+                }
+            }
+        }
+        
+        // Final aşaması bitti mi kontrol et
+        if gameState.currentFinalRound >= gameState.finalRounds {
+            // Final kazananını belirle
+            let finalistScores = gameState.finalists.map { finalist in
+                (finalist, gameState.playerScores[finalist.deviceID] ?? 0)
+            }.sorted { $0.1 > $1.1 }
+            
+            if let winnerData = finalistScores.first {
+                gameState.tournamentWinner = winnerData.0
+                print("🥇 Turnuva kazananı: \(winnerData.0.displayName)")
+            }
+            
+            gameState.gamePhase = .oyunBitti
+        } else {
+            // Yeni final turu
+            gameState.choices.removeAll()
+            gameState.gamePhase = .geriSayim
+        }
+        
+        syncGameState()
+    }
+
+    /// İzleyici aksiyonunu işler
+    func handleSpectatorAction(deviceID: String, action: SpectatorAction) {
+        switch action {
+        case .watch:
+            print("👀 \(deviceID) oyunu izlemeye devam ediyor")
+            // İzleyici modunda kal
+            
+        case .leave:
+            print("🚪 \(deviceID) oyundan ayrılıyor")
+            // Ana menüye dön
+            if deviceID == getCurrentUserDeviceID() {
+                resetToMainMenu()
+            } else {
+                // Diğer oyuncuyu sistemden çıkar
+                handlePlayerLeave(deviceID: deviceID)
+            }
+        }
+    }
+
+    /// Aşamalı turnuva için özel round completion check
+    private func checkTournamentRoundCompletion() {
+        guard isHost else { return }
+        
+        let requiredChoices: Int
+        
+        switch gameState.tournamentPhase {
+        case .duel:
+            requiredChoices = gameState.players.count
+            
+        case .elimination:
+            requiredChoices = gameState.activePlayers.count
+            
+        case .final:
+            requiredChoices = gameState.finalists.count
+            
+        case .spectating:
+            requiredChoices = gameState.finalists.count
+            
+        case .none:
+            requiredChoices = gameState.activePlayers.count
+        }
+        
+        guard gameState.choices.count >= requiredChoices else {
+            print("🏆 Turnuva turu devam ediyor: \(gameState.choices.count)/\(requiredChoices)")
+            return
+        }
+        
+        print("✅ Turnuva turu tamamlandı - Sonuçlar işleniyor")
+        processTournamentRound()
     }
     
     // MARK: - Message Handlers - YENİ FONKSİYONLAR
@@ -1677,6 +2031,26 @@ extension MultipeerManager: MCSessionDelegate {
         case .restartTournament:
             print("🔄 Turnuva yeniden başlatma komutu alındı")
             handleTournamentRestart()
+            
+        case .startTournamentStage(let stage):
+            print("🏆 Turnuva aşaması başlangıcı: \(stage)")
+            gameState.tournamentPhase = stage
+
+        case .updateTournamentScores(let scores):
+            print("📊 Turnuva skorları güncellendi")
+            gameState.playerScores = scores
+
+        case .spectatorAction(let deviceID, let action):
+            print("👀 İzleyici aksiyonu: \(deviceID) - \(action)")
+            handleSpectatorAction(deviceID: deviceID, action: action)
+
+        case .tournamentWinner(let winner):
+            print("🏆 Turnuva kazananı açıklandı: \(winner.displayName)")
+            gameState.tournamentWinner = winner
+
+        case .duelRoundWin(let deviceID):
+            print("⚔️ Düello turu kazananı: \(deviceID)")
+            gameState.duelScores[deviceID, default: 0] += 1
         }
     }
     

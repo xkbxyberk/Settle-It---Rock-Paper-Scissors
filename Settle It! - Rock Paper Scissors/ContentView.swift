@@ -174,6 +174,9 @@ struct ContentView: View {
             
         case .sonucGosteriliyor:
             ResultsView()
+        
+        case .elemeAsamasi, .finalAsamasi, .izleyiciModu, .duelModu:
+            TournamentStageView()
             
         case .oyunBitti:
             GameOverView()
@@ -332,6 +335,10 @@ struct ContentView: View {
         case .turOynaniyor: return .green
         case .sonucGosteriliyor: return .purple
         case .oyunBitti: return .red
+        case .elemeAsamasi: return .cyan
+        case .finalAsamasi: return .yellow
+        case .izleyiciModu: return .gray
+        case .duelModu: return .pink
         }
     }
     
@@ -343,6 +350,10 @@ struct ContentView: View {
         case .turOynaniyor: return "Oyun"
         case .sonucGosteriliyor: return "Sonuç"
         case .oyunBitti: return "Bitti"
+        case .elemeAsamasi: return "Eleme"
+        case .finalAsamasi: return "Final"
+        case .izleyiciModu: return "İzleyici"
+        case .duelModu: return "Düello"
         }
     }
 }

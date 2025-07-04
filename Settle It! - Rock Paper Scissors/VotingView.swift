@@ -112,6 +112,18 @@ struct VotingView: View {
             ) {
                 multipeerManager.castVote(mode: .sallama)
             }
+            
+            // Aşamalı Turnuva
+            VoteOptionButton(
+                title: "🏆 Aşamalı Turnuva",
+                subtitle: "Dinamik eleme ve final sistemi",
+                gameMode: .asamaliTurnuva,
+                isSelected: hasUserVoted && userVote == .asamaliTurnuva,
+                isDisabled: hasUserVoted,
+                multipeerManager: multipeerManager
+            ) {
+                multipeerManager.castVote(mode: .asamaliTurnuva)
+            }
         }
     }
     

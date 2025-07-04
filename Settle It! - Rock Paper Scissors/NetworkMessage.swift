@@ -20,6 +20,11 @@ enum NetworkMessage: Codable {
     case playAgainRequest(deviceID: String) // Tekrar oyna isteği
     case playAgainResponse(deviceID: String, accepted: Bool) // Tekrar oyna yanıtı
     case restartTournament // Yeni turnuva başlatma (aynı oyuncularla)
+    case startTournamentStage(stage: TournamentPhase) // Turnuva aşaması başlat
+    case updateTournamentScores(scores: [String: Int]) // Turnuva skorlarını güncelle
+    case spectatorAction(deviceID: String, action: SpectatorAction) // İzleyici aksiyonu
+    case tournamentWinner(winner: Player) // Turnuva kazananı açıkla
+    case duelRoundWin(deviceID: String) // Düello turunu kazanma
 }
 
 // MARK: - Host Game Settings
@@ -28,9 +33,15 @@ struct HostGameSettings: Codable, Equatable {
     var countdownDuration: Int = 3
     var preferredGameMode: GameMode? = nil
     var maxPlayers: Int = 8
+    var eliminationRoundsCount: Int = 3
+    var finalRoundsCount: Int = 3
+    var duelWinCount: Int = 3
     
     init(from gameSettings: GameSettings) {
         self.countdownDuration = gameSettings.countdownDuration
         self.preferredGameMode = gameSettings.preferredGameMode
+        self.eliminationRoundsCount = gameSettings.eliminationRoundsCount
+        self.finalRoundsCount = gameSettings.finalRoundsCount
+        self.duelWinCount = gameSettings.duelWinCount
     }
 }
